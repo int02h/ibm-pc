@@ -1,0 +1,25 @@
+Online disassembler
+https://onlinedisassembler.com/odaweb/
+
+BOCHS debugger commands
+https://bochs.sourceforge.io/cgi-bin/topper.pl?name=New+Bochs+Documentation&url=https://bochs.sourceforge.io/doc/docbook/
+
+Reset vector
+https://en.wikipedia.org/wiki/Reset_vector
+
+Volume boot record
+https://en.wikipedia.org/wiki/Volume_boot_record
+
+Opcodes
+http://www.mathemainzel.info/files/x86asmref.html
+http://ref.x86asm.net/coder32.html
+https://c9x.me/x86/
+
+Instruction format
+http://www.c-jump.com/CIS77/CPU/x86/lecture.html
+
+MOD R/M
+http://sparksandflames.com/files/x86InstructionChart.html
+
+CMOS
+https://stanislavs.org/helppc/cmos_ram.html

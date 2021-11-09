@@ -1,0 +1,9 @@
+{
+  "bios_rom": "/Users/dpopov/Projects/thirdparty/Intel8086/src/bios.bin",
+  "cassette_basic": [
+    "./CasetteBASIC/5150cb10_1.bin",
+    "./CasetteBASIC/5150cb10_2.bin",
+    "./CasetteBASIC/5150cb10_3.bin",
+    "./CasetteBASIC/5150cb10_4.bin"
+  ]
+}
