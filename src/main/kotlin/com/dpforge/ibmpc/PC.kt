@@ -55,7 +55,7 @@ class PC(
             connect(FDC(pic))
         }
 
-        Display(videoRAM, cga, ppi)
+        Display(videoRAM, cga, Keyboard(ppi))
 
         cpu = CPU(memory, ports, pic, pit)
     }
@@ -76,7 +76,7 @@ class PC(
             return null
         }
         val data = images.map { it.readBytes() }
-        val size = data.sumBy { it.size }
+        val size = data.sumOf { it.size }
         val basic = ByteArray(size)
         var destinationOffset = 0
         data.forEach {
