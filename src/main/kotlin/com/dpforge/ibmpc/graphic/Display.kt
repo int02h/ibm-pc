@@ -53,6 +53,9 @@ class Display(
 
         val fontMetrics = fontMetrics ?: g.fontMetrics.also { fontMetrics = it }
 
+        val cursorRow = cga.cursorAddress / colCount
+        val cursorCol = cga.cursorAddress % colCount
+
         cga.onEndVerticalRetrace()
 
         for (row in 0 until rowCount) {
@@ -65,12 +68,18 @@ class Display(
                 val attribute = videoRAM.getByte(BASE_MEMORY_ADDRESS + cellIndex + 1)
 
                 // draw cell background
-                g.color =COLORS[attribute.highNibble]
+                g.color = COLORS[attribute.highNibble]
                 g.fillRect(col * cellWidth, row * cellHeight, cellWidth, cellHeight)
 
                 // draw cell foreground
                 g.color = COLORS[attribute.lowNibble]
-                g.drawString(character.toString(), col * cellWidth, row * cellHeight + fontMetrics.ascent)
+
+                val cursorTime = System.currentTimeMillis() % 1000 >= 500
+                if (cga.isCursorEnabled && cursorTime && row == cursorRow && col == cursorCol) {
+                    g.drawString("_", col * cellWidth, row * cellHeight + fontMetrics.ascent)
+                } else {
+                    g.drawString(character.toString(), col * cellWidth, row * cellHeight + fontMetrics.ascent)
+                }
             }
 
             cga.onStartHorizontalRetrace()

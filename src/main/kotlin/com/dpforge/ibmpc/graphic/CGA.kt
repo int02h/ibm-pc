@@ -32,6 +32,12 @@ class CGA(
     var mode: Mode = Mode.TEXT_80x25
         private set
 
+    val cursorAddress: Int
+        get() = (registers[REGISTER_CURSOR_ADDRESS_MSB] shl 8) or (registers[REGISTER_CURSOR_ADDRESS_LSB])
+
+    val isCursorEnabled: Boolean
+        get() = !registers[REGISTER_CURSOR_START].bit(5)
+
     fun onStartVerticalRetrace() {
         inVerticalRetrace = true
     }
@@ -39,6 +45,7 @@ class CGA(
     fun onEndVerticalRetrace() {
         inVerticalRetrace = false
     }
+
     fun onStartHorizontalRetrace() {
         inHorizontalRetrace = true
     }
@@ -72,6 +79,12 @@ class CGA(
                 error("Registers 0x10..0x11 are read only")
             }
             registers[registerIndex] = value
+
+            when (registerIndex) {
+                REGISTER_CURSOR_START -> {
+                    logger.debug("Cursor enabled: $isCursorEnabled")
+                }
+            }
         }
 
         override fun read(): Int {
@@ -178,6 +191,12 @@ class CGA(
     private enum class Palette {
         RED_GREEN_BROWN,
         CYAN_MAGENTA_WHITE
+    }
+
+    private companion object {
+        const val REGISTER_CURSOR_START = 0x0A
+        const val REGISTER_CURSOR_ADDRESS_MSB = 0x0E
+        const val REGISTER_CURSOR_ADDRESS_LSB = 0x0F
     }
 
 }

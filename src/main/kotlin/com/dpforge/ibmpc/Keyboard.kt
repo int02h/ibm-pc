@@ -8,7 +8,7 @@ class Keyboard(
 ) : KeyListener {
 
     override fun keyTyped(e: KeyEvent?) {
-
+        // do nothing
     }
 
     override fun keyPressed(e: KeyEvent) {
