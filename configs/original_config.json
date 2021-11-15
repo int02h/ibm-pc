@@ -1,5 +1,5 @@
 {
-  "bios_rom": "/Users/dpopov/Projects/thirdparty/Intel8086/src/bios.bin",
+  "bios_rom": "./bios/original/BIOS_5150_24APR81_U33.BIN",
   "cassette_basic": [
     "./CasetteBASIC/5150cb10_1.bin",
     "./CasetteBASIC/5150cb10_2.bin",
