@@ -21,6 +21,12 @@ class DMA : PortDevice {
     override fun getPortMapping(): Map<Int, com.dpforge.ibmpc.port.Port> = mapOf(
         0x00 to AddressRegister(channel = 0),
         0x01 to WordCount(channel = 0),
+        0x02 to AddressRegister(channel = 1),
+        0x03 to WordCount(channel = 1),
+        0x04 to AddressRegister(channel = 2),
+        0x05 to WordCount(channel = 2),
+        0x06 to AddressRegister(channel = 3),
+        0x07 to WordCount(channel = 3),
         0x08 to StatusCommandRegister(),
         0x0A to MaskRegister(),
         0x0B to ModeRegister(),
@@ -39,9 +45,7 @@ class DMA : PortDevice {
             address[channel] = value
         }
 
-        override fun read(): Int {
-            TODO("Not yet implemented")
-        }
+        override fun read(): Int = address[channel]
 
     }
 
@@ -51,9 +55,7 @@ class DMA : PortDevice {
             wordCount[channel] = value
         }
 
-        override fun read(): Int {
-            TODO("Not yet implemented")
-        }
+        override fun read(): Int = wordCount[channel]
 
     }
 
