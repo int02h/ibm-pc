@@ -56,12 +56,12 @@ class CPU(
         pit.update()
     }
 
-    fun handleOpcodeAtCodeOffset() {
+    private fun handleOpcodeAtCodeOffset() {
         val builder = StringBuilder("[${codeOffset.toHex()}]")
         try {
             do {
                 val opcode = memory.getByte(codeOffset)
-                builder.append(" ${opcode.toHex()}")
+                builder.append(" ${DebugUtils.getMnemonic(opcode)} (${opcode.toHex()})")
                 val handled = handleOpcode(opcode)
             } while (!handled)
         } finally {
