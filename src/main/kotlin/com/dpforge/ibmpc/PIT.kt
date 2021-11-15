@@ -2,6 +2,8 @@ package com.dpforge.ibmpc
 
 import com.dpforge.ibmpc.extensions.bitInt
 import com.dpforge.ibmpc.extensions.exhaustive
+import com.dpforge.ibmpc.extensions.lsb
+import com.dpforge.ibmpc.extensions.msb
 import com.dpforge.ibmpc.port.Port
 import com.dpforge.ibmpc.port.PortDevice
 import org.slf4j.LoggerFactory
@@ -77,20 +79,34 @@ class PIT(
     inner class ControlRegister : Port {
 
         override fun write(value: Int) {
-            val counter = Counter(
-                type = CounterType.values()[value.bitInt(0)],
-                mode = CounterMode.values()[(value shr 1) and 0b111],
-                format = ReadWriteLatchFormat.values()[(value shr 4) and 0b11],
-            )
             val selectCounter = (value shr 6) and 0b11
             if (selectCounter == 0b11) {
                 error("read back command (8254 only, illegal on 8253)")
             }
-            counters[selectCounter] = counter
-            logger.debug(
-                "Initialize counter {} with type = {}, mode = {}, format {}",
-                selectCounter, counter.type, counter.mode, counter.format
-            )
+            var counter = counters[selectCounter]
+            if (counter == null) {
+                counter = Counter()
+                counters[selectCounter] = counter
+            }
+
+            counter.type = CounterType.values()[value.bitInt(0)]
+            val mode = CounterMode.values()[(value shr 1) and 0b111]
+            counter.setMode(mode)
+
+            val readLoad = (value shr 4) and 0b11
+            if (readLoad == 0) {
+                counter.latchValue()
+                logger.debug(
+                    "Latch counter {}; type = {}, mode = {}, format {}",
+                    selectCounter, counter.type, mode, counter.format,
+                )
+            } else {
+                counter.format = ReadLoadMode.values()[readLoad - 1]
+                logger.debug(
+                    "Config counter {} with type = {}, mode = {}, format {}",
+                    selectCounter, counter.type, mode, counter.format,
+                )
+            }
         }
 
         override fun read(): Int {
@@ -99,14 +115,13 @@ class PIT(
 
     }
 
-    private class Counter(
-        val type: CounterType,
-        val mode: CounterMode,
-        val format: ReadWriteLatchFormat
-    ) {
+    private class Counter {
 
-        private var output: Boolean = getInitialOutputValue(mode)
+        lateinit var type: CounterType
+        private lateinit var mode: CounterMode
+        lateinit var format: ReadLoadMode
 
+        private var output: Boolean = false
         private var resetLSB: Boolean = true
 
         private var currentValue: Int = 0
@@ -121,23 +136,36 @@ class PIT(
                 field = value and 0xFFFF
             }
 
-        fun getValueWithLatch(): Int = when (format) {
-            ReadWriteLatchFormat.LATCH_PRESENT_COUNTER_VALUE -> currentValue
-            ReadWriteLatchFormat.READ_WRITE_OF_MSB_ONLY -> TODO()
-            ReadWriteLatchFormat.READ_WRITE_OF_LSB_ONLY -> TODO()
-            ReadWriteLatchFormat.READ_WRITE_LSB_FOLLOWED_BY_WRITE_OF_MSB -> TODO()
+        private var latchedValue: Int? = null
+
+        fun setMode(mode: CounterMode) {
+            output = getInitialOutputValue(mode)
+            this.mode = mode
+        }
+
+        fun latchValue() {
+            latchedValue = currentValue
+        }
+
+        fun getValueWithLatch(): Int {
+            val value = latchedValue ?: currentValue
+            latchedValue = null
+            return when (format) {
+                ReadLoadMode.READ_WRITE_OF_MSB_ONLY -> value.msb
+                ReadLoadMode.READ_WRITE_OF_LSB_ONLY -> value.lsb
+                ReadLoadMode.READ_WRITE_LSB_FOLLOWED_BY_WRITE_OF_MSB -> TODO()
+            }
         }
 
         fun reset(newValue: Int) {
             when (format) {
-                ReadWriteLatchFormat.LATCH_PRESENT_COUNTER_VALUE -> TODO()
-                ReadWriteLatchFormat.READ_WRITE_OF_MSB_ONLY -> {
+                ReadLoadMode.READ_WRITE_OF_MSB_ONLY -> {
                     initialValue = ((newValue shl 8) or (initialValue and 0xFF)) and 0xFFFF
                 }
-                ReadWriteLatchFormat.READ_WRITE_OF_LSB_ONLY -> {
+                ReadLoadMode.READ_WRITE_OF_LSB_ONLY -> {
                     initialValue = ((newValue and 0xFF) or (initialValue and 0xFF00)) and 0xFFFF
                 }
-                ReadWriteLatchFormat.READ_WRITE_LSB_FOLLOWED_BY_WRITE_OF_MSB -> {
+                ReadLoadMode.READ_WRITE_LSB_FOLLOWED_BY_WRITE_OF_MSB -> {
                     if (resetLSB) {
                         initialValue = ((newValue and 0xFF) or (initialValue and 0xFF00)) and 0xFFFF
                         resetLSB = false
@@ -213,8 +241,7 @@ class PIT(
         HARDWARE_TRIGGERED_STROBE
     }
 
-    enum class ReadWriteLatchFormat {
-        LATCH_PRESENT_COUNTER_VALUE,
+    enum class ReadLoadMode {
         READ_WRITE_OF_MSB_ONLY,
         READ_WRITE_OF_LSB_ONLY,
         READ_WRITE_LSB_FOLLOWED_BY_WRITE_OF_MSB

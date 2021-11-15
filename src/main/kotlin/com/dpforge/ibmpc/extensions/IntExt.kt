@@ -6,6 +6,12 @@ val Int.lowerWord: Int
 val Int.higherWord: Int
     get() = (this shr 16) and 0xFFFF
 
+val Int.lsb: Int
+    get() = this and 0xFF
+
+val Int.msb: Int
+    get() = (this shr 8) and 0xFF
+
 val Int.lowNibble: Int
     get() = this and 0xF
 
