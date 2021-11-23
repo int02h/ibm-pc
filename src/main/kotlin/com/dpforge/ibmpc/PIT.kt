@@ -44,7 +44,8 @@ class PIT(
         }
 
         override fun read(): Int {
-            TODO("Not yet implemented")
+            val counter = counters[0] ?: error("Counter 1 is not initialized")
+            return counter.getValueWithLatch()
         }
 
     }
@@ -71,7 +72,8 @@ class PIT(
         }
 
         override fun read(): Int {
-            TODO("Not yet implemented")
+            val counter = counters[2] ?: error("Counter 2 is not initialized")
+            return counter.getValueWithLatch()
         }
 
     }
@@ -89,18 +91,14 @@ class PIT(
                 counters[selectCounter] = counter
             }
 
-            counter.type = CounterType.values()[value.bitInt(0)]
-            val mode = CounterMode.values()[(value shr 1) and 0b111]
-            counter.setMode(mode)
-
             val readLoad = (value shr 4) and 0b11
             if (readLoad == 0) {
                 counter.latchValue()
-                logger.debug(
-                    "Latch counter {}; type = {}, mode = {}, format {}",
-                    selectCounter, counter.type, mode, counter.format,
-                )
+                logger.debug("Latch counter {}", selectCounter)
             } else {
+                counter.type = CounterType.values()[value.bitInt(0)]
+                val mode = CounterMode.values()[(value shr 1) and 0b111]
+                counter.setMode(mode)
                 counter.format = ReadLoadMode.values()[readLoad - 1]
                 logger.debug(
                     "Config counter {} with type = {}, mode = {}, format {}",
@@ -122,7 +120,7 @@ class PIT(
         lateinit var format: ReadLoadMode
 
         private var output: Boolean = false
-        private var resetLSB: Boolean = true
+        private var accessLSB: Boolean = true
 
         private var currentValue: Int = 0
             get() = field and 0xFFFF
@@ -153,25 +151,33 @@ class PIT(
             return when (format) {
                 ReadLoadMode.READ_WRITE_OF_MSB_ONLY -> value.msb
                 ReadLoadMode.READ_WRITE_OF_LSB_ONLY -> value.lsb
-                ReadLoadMode.READ_WRITE_LSB_FOLLOWED_BY_WRITE_OF_MSB -> TODO()
+                ReadLoadMode.READ_WRITE_LSB_FOLLOWED_BY_WRITE_OF_MSB -> {
+                    if (accessLSB) {
+                        accessLSB = false
+                        value.lsb
+                    } else {
+                        accessLSB = true
+                        value.msb
+                    }
+                }
             }
         }
 
         fun reset(newValue: Int) {
             when (format) {
                 ReadLoadMode.READ_WRITE_OF_MSB_ONLY -> {
-                    initialValue = ((newValue shl 8) or (initialValue and 0xFF)) and 0xFFFF
+                    initialValue = (newValue shl 8) or (initialValue and 0xFF)
                 }
                 ReadLoadMode.READ_WRITE_OF_LSB_ONLY -> {
-                    initialValue = ((newValue and 0xFF) or (initialValue and 0xFF00)) and 0xFFFF
+                    initialValue = (newValue and 0xFF) or (initialValue and 0xFF00)
                 }
                 ReadLoadMode.READ_WRITE_LSB_FOLLOWED_BY_WRITE_OF_MSB -> {
-                    if (resetLSB) {
-                        initialValue = ((newValue and 0xFF) or (initialValue and 0xFF00)) and 0xFFFF
-                        resetLSB = false
+                    if (accessLSB) {
+                        initialValue = (newValue and 0xFF) or (initialValue and 0xFF00)
+                        accessLSB = false
                     } else {
-                        initialValue = ((newValue shl 8) or (initialValue and 0xFF)) and 0xFFFF
-                        resetLSB = true
+                        initialValue = (newValue shl 8) or (initialValue and 0xFF)
+                        accessLSB = true
                     }
                 }
             }.exhaustive
@@ -191,7 +197,10 @@ class PIT(
                 CounterMode.PROGRAMMABLE_ONE_SHOT -> TODO()
                 CounterMode.RATE_GENERATOR -> {
                     currentValue -= 1
-                    if (currentValue == 1) {
+                    // Different docs give conflicting information.
+                    // Ones of them say the counter is being reset when reaching value of 1
+                    // while the other says that value of 0. But original BIOS expects 0.
+                    if (currentValue == 0) {
                         currentValue = initialValue
                         output = false
                     } else {
@@ -242,8 +251,8 @@ class PIT(
     }
 
     enum class ReadLoadMode {
-        READ_WRITE_OF_MSB_ONLY,
         READ_WRITE_OF_LSB_ONLY,
+        READ_WRITE_OF_MSB_ONLY,
         READ_WRITE_LSB_FOLLOWED_BY_WRITE_OF_MSB
     }
 }
