@@ -9,7 +9,7 @@ fun CPU.jumpShortIf(timing: Timing.ConditionalTiming, predicate: Registers.() ->
     registers.ip += 2 // for instruction itself
     return if (predicate(registers)) {
         registers.ip += relativeDisplacement
-        timing.jumpCycle
+        timing.jumpCycles
     } else {
         timing.noJumpCycles
     }

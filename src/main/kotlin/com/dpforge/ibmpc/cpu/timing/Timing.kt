@@ -254,11 +254,11 @@ object Timing {
     fun lea(addressingMode: AddressingMode.Memory) = 2 + addressingMode.clocks
     fun loadFarPointer(addressingMode: AddressingMode.Memory) = 24 + addressingMode.clocks
 
-    sealed class ConditionalTiming(val noJumpCycles: Int, val jumpCycle: Int) {
-        object JCC : ConditionalTiming(noJumpCycles = 4, jumpCycle = 16)
-        object LOOP : ConditionalTiming(noJumpCycles = 5, jumpCycle = 17)
-        object LOOPZ : ConditionalTiming(noJumpCycles = 6, jumpCycle = 18)
-        object LOOPNZ : ConditionalTiming(noJumpCycles = 5, jumpCycle = 19)
+    sealed class ConditionalTiming(val noJumpCycles: Int, val jumpCycles: Int) {
+        object JCC : ConditionalTiming(noJumpCycles = 4, jumpCycles = 16)
+        object LOOP : ConditionalTiming(noJumpCycles = 5, jumpCycles = 17)
+        object LOOPZ : ConditionalTiming(noJumpCycles = 6, jumpCycles = 18)
+        object LOOPNZ : ConditionalTiming(noJumpCycles = 5, jumpCycles = 19)
     }
 
     sealed class StringOperationTiming(val singleExecution: Int, val repeatExecution: Int) {
