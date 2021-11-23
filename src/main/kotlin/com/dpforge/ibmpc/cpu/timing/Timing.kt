@@ -254,24 +254,24 @@ object Timing {
     fun lea(addressingMode: AddressingMode.Memory) = 2 + addressingMode.clocks
     fun loadFarPointer(addressingMode: AddressingMode.Memory) = 24 + addressingMode.clocks
 
-    sealed class ConditionalTiming(val noJumpCycles: Int, val jumpCycles: Int) {
-        object JCC : ConditionalTiming(noJumpCycles = 4, jumpCycles = 16)
-        object LOOP : ConditionalTiming(noJumpCycles = 5, jumpCycles = 17)
-        object LOOPZ : ConditionalTiming(noJumpCycles = 6, jumpCycles = 18)
-        object LOOPNZ : ConditionalTiming(noJumpCycles = 5, jumpCycles = 19)
+    enum class ConditionalTiming(val noJumpCycles: Int, val jumpCycles: Int) {
+        JCC(noJumpCycles = 4, jumpCycles = 16),
+        LOOP(noJumpCycles = 5, jumpCycles = 17),
+        LOOPZ(noJumpCycles = 6, jumpCycles = 18),
+        LOOPNZ(noJumpCycles = 5, jumpCycles = 19),
     }
 
-    sealed class StringOperationTiming(val singleExecution: Int, val repeatExecution: Int) {
-        object CMPSB : StringOperationTiming(30, 30)
-        object CMPSW : StringOperationTiming(30, 30)
-        object LODSB : StringOperationTiming(16, 16)
-        object LODSW : StringOperationTiming(16, 16)
-        object MOVSB : StringOperationTiming(18, 17)
-        object MOVSW : StringOperationTiming(26, 25)
-        object SCASB : StringOperationTiming(19, 15)
-        object SCASW : StringOperationTiming(19, 19)
-        object STOSB : StringOperationTiming(11, 10)
-        object STOSW : StringOperationTiming(15, 14)
+    enum class StringOperationTiming(val singleExecution: Int, val repeatExecution: Int) {
+        CMPSB(30, 30),
+        CMPSW(30, 30),
+        LODSB(16, 16),
+        LODSW(16, 16),
+        MOVSB(18, 17),
+        MOVSW(26, 25),
+        SCASB(19, 15),
+        SCASW(19, 19),
+        STOSB(11, 10),
+        STOSW(15, 14),
     }
 
     enum class AddressingModeTiming(val clocks: Int) {
