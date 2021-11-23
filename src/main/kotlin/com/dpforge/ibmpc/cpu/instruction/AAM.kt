@@ -3,10 +3,11 @@ package com.dpforge.ibmpc.cpu.instruction
 import com.dpforge.ibmpc.cpu.CPU
 import com.dpforge.ibmpc.cpu.FlagsRegister
 import com.dpforge.ibmpc.cpu.InterruptException
+import com.dpforge.ibmpc.cpu.timing.Timing
 
 object AAM {
 
-    fun aam(cpu: CPU) = with(cpu) {
+    fun aam(cpu: CPU): Int = with(cpu) {
         val b = memory.getByte(codeOffset + 1)
         if (b == 0) {
             throw InterruptException(InterruptException.Type.DIVISION_BY_ZERO)
@@ -23,6 +24,7 @@ object AAM {
         registers.flags.setFlag(FlagsRegister.ADJUST_FLAG, false)
 
         registers.ip += 2
+        Timing.aam()
     }
 
 }

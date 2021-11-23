@@ -6,6 +6,8 @@ import com.dpforge.ibmpc.PIC
 import com.dpforge.ibmpc.PIT
 import com.dpforge.ibmpc.port.Ports
 import com.dpforge.ibmpc.cpu.instruction.*
+import com.dpforge.ibmpc.cpu.timing.Timing
+import com.dpforge.ibmpc.cpu.timing.Timing.StringOperationTiming
 import com.dpforge.ibmpc.extensions.higherWord
 import com.dpforge.ibmpc.extensions.lowerWord
 import com.dpforge.ibmpc.extensions.toHex
@@ -28,6 +30,8 @@ class CPU(
     val alu = ALU(registers.flags)
 
     var haltState: Boolean = false
+
+    private var clocks: Int = 0
 
     fun reset() {
         registers.cs = 0xf000
@@ -53,7 +57,10 @@ class CPU(
             callInterruptHandler(ie.type.interrupt)
         }
 
-        pit.update()
+        while (clocks > 3) {
+            clocks -= 4
+            pit.update()
+        }
     }
 
     private fun handleOpcodeAtCodeOffset() {
@@ -71,7 +78,7 @@ class CPU(
 
     private fun handleOpcode(opcode: Int): Boolean {
         var handled = true
-        when (opcode) {
+        clocks += when (opcode) {
             0x00 -> ADD.rmbRb(this)
             0x01 -> ADD.rmwRw(this)
             0x02 -> ADD.rbRmb(this)
@@ -113,6 +120,7 @@ class CPU(
             0x26 -> {
                 handled = false
                 overrideSegmentRegister(SegmentRegister.ES)
+                Timing.segmentOverride()
             }
             0x27 -> DAA.daa(this)
             0x28 -> SUB.rmbRb(this)
@@ -124,6 +132,7 @@ class CPU(
             0x2E -> {
                 handled = false
                 overrideSegmentRegister(SegmentRegister.CS)
+                Timing.segmentOverride()
             }
             0x2F -> DAS.das(this)
             0x30 -> XOR.rmbRb(this)
@@ -135,6 +144,7 @@ class CPU(
             0x36 -> {
                 handled = false
                 overrideSegmentRegister(SegmentRegister.SS)
+                Timing.segmentOverride()
             }
             0x37 -> AAA.aaa(this)
             0x38 -> CMP.rmbRb(this)
@@ -146,6 +156,7 @@ class CPU(
             0x3E -> {
                 handled = false
                 overrideSegmentRegister(SegmentRegister.DS)
+                Timing.segmentOverride()
             }
             0x3F -> AAS.aas(this)
             in 0x40..0x47 -> INC.reg16(opcode, this)
@@ -273,28 +284,28 @@ class CPU(
             0xD0 -> {
                 val b = memory.getByte(codeOffset + 1)
                 when (b.additionalOpcode) {
-                    0x00 -> ROL.rmb(this, 1)
-                    0x01 -> ROR.rmb(this, 1)
-                    0x02 -> RCL.rmb(this, 1)
-                    0x03 -> RCR.rmb(this, 1)
-                    0x04 -> SHL.rmb(this, 1)
-                    0x05 -> SHR.rmb(this, 1)
+                    0x00 -> ROL.rmb1(this)
+                    0x01 -> ROR.rmb1(this)
+                    0x02 -> RCL.rmb1(this)
+                    0x03 -> RCR.rmb1(this)
+                    0x04 -> SHL.rmb1(this)
+                    0x05 -> SHR.rmb1(this)
                     0x06 -> error("Undocumented")
-                    0x07 -> SAR.rmb(this, 1)
+                    0x07 -> SAR.rmb1(this)
                     else -> impossible()
                 }
             }
             0xD1 -> {
                 val b = memory.getByte(codeOffset + 1)
                 when (b.additionalOpcode) {
-                    0x00 -> ROL.rmw(this, 1)
-                    0x01 -> ROR.rmw(this, 1)
-                    0x02 -> RCL.rmw(this, 1)
-                    0x03 -> RCR.rmw(this, 1)
-                    0x04 -> SHL.rmw(this, 1)
-                    0x05 -> SHR.rmw(this, 1)
+                    0x00 -> ROL.rmw1(this)
+                    0x01 -> ROR.rmw1(this)
+                    0x02 -> RCL.rmw1(this)
+                    0x03 -> RCR.rmw1(this)
+                    0x04 -> SHL.rmw1(this)
+                    0x05 -> SHR.rmw1(this)
                     0x06 -> error("Undocumented")
-                    0x07 -> SAR.rmw(this, 1)
+                    0x07 -> SAR.rmw1(this)
                     else -> impossible()
                 }
             }
@@ -333,12 +344,17 @@ class CPU(
             0xD6 -> {
                 // Undefined and Reserved; Does not Generate #UD
                 registers.ip += 1
+                Timing.undefined()
             }
             0xD7 -> XLAT.xlat(this)
             in 0xD8..0xDF -> {
-                val skipCount = AddressingMode.getForCurrentCodeOffset(this).byteCount
+                val addressingMode = AddressingMode.getForCurrentCodeOffset(this)
                 logger.warn("Floating-point arithmetic opcode ${opcode.toHex()} skipped")
-                registers.ip += skipCount
+                registers.ip += addressingMode.byteCount
+                when (addressingMode) {
+                    is AddressingMode.Register -> 0
+                    is AddressingMode.Memory -> addressingMode.clocks
+                }
             }
             0xE0 -> LOOPNZ.short(this)
             0xE1 -> LOOPZ.short(this)
@@ -360,16 +376,19 @@ class CPU(
             0xF1 -> {
                 // Undefined and Reserved; Does not Generate #UD
                 registers.ip += 1
+                Timing.undefined()
             }
             0xF2 -> {
                 handled = false
                 repMode = RepMode.REPNZ
                 registers.ip += 1
+                Timing.repeat()
             }
             0xF3 -> {
                 handled = false
                 repMode = RepMode.REP_REPZ
                 registers.ip += 1
+                Timing.repeat()
             }
             0xF4 -> HLT.hlt(this)
             0xF5 -> FlagInstructions.cmc(this)
@@ -465,16 +484,18 @@ class CPU(
         return value
     }
 
-    fun stringOperation(checkZeroFlag: Boolean, block: CPU.() -> Unit) {
+    fun stringOperation(timing: StringOperationTiming, checkZeroFlag: Boolean, block: CPU.() -> Unit): Int {
         val repMode = this.repMode
         if (repMode == null) {
             this.block()
             registers.ip += 1
-            return
+            return timing.singleExecution
         }
 
+        var totalClocks = 0
         while (registers.cx != 0) {
             this.block()
+            totalClocks += timing.repeatExecution
             registers.cx -= 1
             val zf = registers.flags.getFlag(FlagsRegister.ZERO_FLAG)
             if (checkZeroFlag) {
@@ -493,6 +514,7 @@ class CPU(
             }
         }
         registers.ip += 1
+        return totalClocks
     }
 
     val codeOffset: Int

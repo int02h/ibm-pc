@@ -4,10 +4,11 @@ import com.dpforge.ibmpc.cpu.CPU
 import com.dpforge.ibmpc.cpu.FlagsRegister
 import com.dpforge.ibmpc.cpu.Register16
 import com.dpforge.ibmpc.cpu.SegmentRegister
+import com.dpforge.ibmpc.cpu.timing.Timing.StringOperationTiming
 
 object LODS {
 
-    fun b(cpu: CPU) = cpu.stringOperation(checkZeroFlag = false) {
+    fun b(cpu: CPU): Int = cpu.stringOperation(timing = StringOperationTiming.LODSB, checkZeroFlag = false) {
         val address = makeAddress16(SegmentRegister.DS, registers.get(Register16.SI))
         registers.al = memory.getByte(address)
         if (registers.flags.getFlag(FlagsRegister.DIRECTION_FLAG)) {
@@ -17,7 +18,7 @@ object LODS {
         }
     }
 
-    fun w(cpu: CPU) = cpu.stringOperation(checkZeroFlag = false) {
+    fun w(cpu: CPU): Int = cpu.stringOperation(timing = StringOperationTiming.LODSW, checkZeroFlag = false) {
         val address = makeAddress16(SegmentRegister.DS, registers.get(Register16.SI))
         registers.ax = memory.getWord(address)
         if (registers.flags.getFlag(FlagsRegister.DIRECTION_FLAG)) {

@@ -16,7 +16,8 @@
 
     <root level="debug">
         <appender-ref ref="STDOUT" />
+<!--        <appender-ref ref="FILE" />-->
     </root>
 
-    <logger name="PIC" level="OFF"/>
+<!--    <logger name="PIC" level="OFF"/>-->
 </configuration>

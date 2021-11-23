@@ -2,10 +2,11 @@ package com.dpforge.ibmpc.cpu.instruction
 
 import com.dpforge.ibmpc.cpu.CPU
 import com.dpforge.ibmpc.cpu.FlagsRegister
+import com.dpforge.ibmpc.cpu.timing.Timing
 
 object DAA {
 
-    fun daa(cpu: CPU) = with(cpu) {
+    fun daa(cpu: CPU):Int = with(cpu) {
         val oldCf = registers.flags.getFlag(FlagsRegister.CARRY_FLAG)
         val oldAl = registers.al
 
@@ -31,6 +32,7 @@ object DAA {
         alu.updateParityFlag(registers.al)
 
         registers.ip += 1
+        Timing.daa()
     }
 
 }

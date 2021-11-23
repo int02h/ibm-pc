@@ -2,10 +2,11 @@ package com.dpforge.ibmpc.cpu.instruction
 
 import com.dpforge.ibmpc.cpu.CPU
 import com.dpforge.ibmpc.cpu.FlagsRegister
+import com.dpforge.ibmpc.cpu.timing.Timing
 
 object AAA {
 
-    fun aaa(cpu: CPU) = with(cpu) {
+    fun aaa(cpu: CPU): Int = with(cpu) {
         if ((registers.al and 0x0F) > 9 || registers.flags.getFlag(FlagsRegister.ADJUST_FLAG)) {
             registers.al = registers.al + 6
             registers.ah = registers.ah + 1
@@ -22,6 +23,7 @@ object AAA {
         alu.updateParityFlag(registers.al)
 
         registers.ip += 1
+        Timing.aaa()
     }
 
 }

@@ -2,10 +2,11 @@ package com.dpforge.ibmpc.cpu.instruction
 
 import com.dpforge.ibmpc.cpu.CPU
 import com.dpforge.ibmpc.cpu.FlagsRegister
+import com.dpforge.ibmpc.cpu.timing.Timing
 
 object AAD {
 
-    fun aad(cpu: CPU) = with(cpu) {
+    fun aad(cpu: CPU): Int = with(cpu) {
         val b = memory.getByte(codeOffset + 1)
         val al = registers.al
         val ah = registers.ah
@@ -20,6 +21,7 @@ object AAD {
         registers.flags.setFlag(FlagsRegister.ADJUST_FLAG, false)
 
         registers.ip += 2
+        Timing.aad()
     }
 
 }

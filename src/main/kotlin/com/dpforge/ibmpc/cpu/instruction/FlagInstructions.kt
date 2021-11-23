@@ -8,53 +8,63 @@ import com.dpforge.ibmpc.cpu.FlagsRegister.Companion.INTERRUPT_ENABLED_FLAG
 import com.dpforge.ibmpc.cpu.FlagsRegister.Companion.PARITY_FLAG
 import com.dpforge.ibmpc.cpu.FlagsRegister.Companion.SIGN_FLAG
 import com.dpforge.ibmpc.cpu.FlagsRegister.Companion.ZERO_FLAG
+import com.dpforge.ibmpc.cpu.timing.Timing
 
 object FlagInstructions {
 
-    fun cli(cpu: CPU) = with(cpu.registers) {
+    fun cli(cpu: CPU): Int = with(cpu.registers) {
         flags.setFlag(INTERRUPT_ENABLED_FLAG, false)
         ip += 1
+        Timing.cli()
     }
 
-    fun cld(cpu: CPU) = with(cpu.registers) {
+    fun cld(cpu: CPU): Int = with(cpu.registers) {
         flags.setFlag(DIRECTION_FLAG, false)
         ip += 1
+        Timing.cld()
     }
 
-    fun clc(cpu: CPU) = with(cpu.registers) {
+    fun clc(cpu: CPU): Int = with(cpu.registers) {
         flags.setFlag(CARRY_FLAG, false)
         ip += 1
+        Timing.clc()
     }
 
-    fun cmc(cpu: CPU) = with(cpu.registers) {
+    fun cmc(cpu: CPU): Int = with(cpu.registers) {
         flags.setFlag(CARRY_FLAG, !flags.getFlag(CARRY_FLAG))
         ip += 1
+        Timing.cmc()
     }
 
-    fun stc(cpu: CPU) = with(cpu.registers) {
+    fun stc(cpu: CPU): Int = with(cpu.registers) {
         flags.setFlag(CARRY_FLAG, true)
         ip += 1
+        Timing.stc()
     }
 
-    fun std(cpu: CPU) = with(cpu.registers) {
+    fun std(cpu: CPU): Int = with(cpu.registers) {
         flags.setFlag(DIRECTION_FLAG, true)
         ip += 1
+        Timing.std()
     }
 
-    fun sti(cpu: CPU) = with(cpu.registers) {
+    fun sti(cpu: CPU): Int = with(cpu.registers) {
         flags.setFlag(INTERRUPT_ENABLED_FLAG, true)
         ip += 1
+        Timing.sti()
     }
 
-    fun sahf(cpu: CPU) = with(cpu) {
+    fun sahf(cpu: CPU): Int = with(cpu) {
         val affectedFlags = SIGN_FLAG or ZERO_FLAG or ADJUST_FLAG or PARITY_FLAG or CARRY_FLAG
         registers.flags.value16 = registers.ah and affectedFlags
         registers.ip += 1
+        Timing.sahf()
     }
 
-    fun lahf(cpu: CPU) = with(cpu) {
+    fun lahf(cpu: CPU): Int = with(cpu) {
         registers.ah = registers.flags.value16
         registers.ip += 1
+        Timing.lahf()
     }
 
 }

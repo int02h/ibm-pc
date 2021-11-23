@@ -2,11 +2,13 @@ package com.dpforge.ibmpc.cpu.instruction
 
 import com.dpforge.ibmpc.cpu.AddressingMode
 import com.dpforge.ibmpc.cpu.CPU
+import com.dpforge.ibmpc.cpu.timing.CallType
+import com.dpforge.ibmpc.cpu.timing.Timing
 import com.dpforge.ibmpc.extensions.toHex
 
 object CALLF {
 
-    fun mww(cpu: CPU) = with(cpu) {
+    fun mww(cpu: CPU): Int = with(cpu) {
         val addressingMode = AddressingMode.getForCurrentCodeOffset(cpu)
 
         registers.ip += addressingMode.byteCount
@@ -23,6 +25,8 @@ object CALLF {
         if (registers.ip == 0 && registers.cs == 0) {
             error("Bad far call. Address ${address.toHex()}")
         }
+
+        Timing.call(CallType.Mem32(addressingMode))
     }
 
 }
