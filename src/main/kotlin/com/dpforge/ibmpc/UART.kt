@@ -10,7 +10,9 @@ class UART : PortDevice {
     private val logger = LoggerFactory.getLogger("UART")
 
     override fun getPortMapping(): Map<Int, Port> = mapOf(
+        0x2FA to IgnoredPort("Interrupt Identification Register", logger),
         0x2FB to IgnoredPort("LCR - Line Control Register", logger),
-        0x3FB to IgnoredPort("LCR - Line Control Register", logger)
+        0x3FA to IgnoredPort("Interrupt Identification Register", logger),
+        0x3FB to IgnoredPort("LCR - Line Control Register", logger),
     )
 }
