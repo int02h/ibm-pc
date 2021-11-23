@@ -49,9 +49,7 @@ class PIC : PortDevice {
     private var specialMaskMode: SpecialMaskMode? = null
 
     fun onHardwareInterrupt(irq: Int) {
-        if (!interruptMaskRegister.bit(irq)) { // interrupt is not masked
-            interruptRequestRegister = interruptMaskRegister or (1 shl irq)
-        }
+        interruptRequestRegister = interruptMaskRegister or (1 shl irq)
     }
 
     fun getPendingInterrupt(): Int? {
@@ -59,13 +57,13 @@ class PIC : PortDevice {
             return null
         }
         for (i in 0..7) {
-            if (interruptRequestRegister.bit(i)) {
+            if (interruptRequestRegister.bit(i) && !interruptMaskRegister.bit(i)) {
                 interruptRequestRegister = interruptRequestRegister.withBit(i, false)
-                inServiceRegister = interruptMaskRegister.withBit(i, true)
+                inServiceRegister = inServiceRegister.withBit(i, true)
                 return baseVectorAddress + i
             }
         }
-        return null // impossible
+        return null
     }
 
     override fun getPortMapping(): Map<Int, Port> = mapOf(
