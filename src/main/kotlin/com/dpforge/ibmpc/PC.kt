@@ -36,9 +36,10 @@ class PC(
         val pit = PIT(pic)
         val ppi = PPI(pic)
         val cga = CGA(memory)
+        val dma = DMA(memory)
 
         val ports = Ports().apply {
-            connect(DMA())
+            connect(dma)
             connect(CMOS())
             connect(pic)
             connect(MDA())
@@ -57,7 +58,7 @@ class PC(
 
         Display(videoRAM, cga, Keyboard(ppi))
 
-        cpu = CPU(memory, ports, pic, pit)
+        cpu = CPU(memory, ports, pic, pit, dma)
     }
 
     fun start() {

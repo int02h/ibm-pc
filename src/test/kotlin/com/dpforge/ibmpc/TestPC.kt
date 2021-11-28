@@ -24,12 +24,16 @@ class TestPC(
         val ports = Ports()
         portDevices.forEach { ports.connect(it) }
 
+        val dma = DMA(memory)
+        ports.connect(dma)
+
         val pic = PIC()
         val cpu = CPU(
             memory = memory,
             ports = ports,
             pic = pic,
             pit = PIT(pic),
+            dma = dma
         )
         cpu.reset()
 

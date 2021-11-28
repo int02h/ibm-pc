@@ -1,6 +1,7 @@
 package com.dpforge.ibmpc.cpu
 
 import com.dpforge.ibmpc.ALU
+import com.dpforge.ibmpc.DMA
 import com.dpforge.ibmpc.memory.Memory
 import com.dpforge.ibmpc.PIC
 import com.dpforge.ibmpc.PIT
@@ -19,6 +20,7 @@ class CPU(
     val ports: Ports,
     val pic: PIC,
     val pit: PIT,
+    val dma: DMA,
 ) {
 
     private val logger = LoggerFactory.getLogger("CPU")
@@ -60,6 +62,7 @@ class CPU(
         while (clocks > 3) {
             clocks -= 4
             pit.update()
+            dma.onCPUCycle()
         }
     }
 
