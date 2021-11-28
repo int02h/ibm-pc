@@ -34,9 +34,15 @@ class PC(
 
         val pic = PIC()
         val pit = PIT(pic)
-        val ppi = PPI(pic)
         val cga = CGA(memory)
         val dma = DMA(memory)
+
+        val ppi = PPI(
+            pic = pic,
+            equipment = PPI.Equipment(
+                hasBootDrive = config.floppyImage != null
+            )
+        )
 
         val ports = Ports().apply {
             connect(dma)

@@ -1,6 +1,7 @@
 package com.dpforge.ibmpc
 
 import com.dpforge.ibmpc.extensions.toHex
+import com.dpforge.ibmpc.extensions.withBit
 import com.dpforge.ibmpc.port.Port
 import com.dpforge.ibmpc.port.PortDevice
 import org.slf4j.LoggerFactory
@@ -10,11 +11,12 @@ import org.slf4j.LoggerFactory
  */
 class PPI(
     private val pic: PIC,
+    private val equipment: Equipment,
 ) : PortDevice {
 
     private val logger = LoggerFactory.getLogger("PPI")
 
-    private val ports = intArrayOf(0x2c, 0, 0, 0)
+    private val ports = intArrayOf(getEquipmentSwitches(), 0, 0, 0)
 
     fun onKeyTyped(scanCode: Int) {
         ports[0] = scanCode
@@ -28,6 +30,16 @@ class PPI(
         0x63 to ValuePort("Control Register", 3)
     )
 
+    private fun getEquipmentSwitches(): Int {
+        var result = 0
+        result = result.withBit(0, equipment.hasBootDrive)
+        result = result.withBit(1, false) // NPU (math coprocessor) present
+        result = result or (0b11 shl 2) // memory size (640K)
+        result = result or (0b10 shl 4) // 80*25 color (mono mode)
+        result = result or (0b00 shl 6) // number of disk drives
+        return result
+    }
+
     private inner class ValuePort(val name: String, val index: Int) : Port {
         override fun write(value: Int) {
             logger.debug("Write ${value.toHex()} to $name")
@@ -39,4 +51,8 @@ class PPI(
             return ports[index]
         }
     }
+
+    class Equipment(
+        val hasBootDrive: Boolean = false
+    )
 }
