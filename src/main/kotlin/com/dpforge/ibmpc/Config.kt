@@ -14,6 +14,10 @@ class Config private constructor(
 ) {
     companion object {
 
+        private val json = Json {
+            ignoreUnknownKeys = true
+        }
+
         @Serializable
         private class Data(
             @SerialName("bios_rom") val biosROM: String,
@@ -23,7 +27,7 @@ class Config private constructor(
 
         fun read(file: File): Config {
             val content = file.readText(StandardCharsets.UTF_8)
-            val data = Json.decodeFromString<Data>(content)
+            val data = json.decodeFromString<Data>(content)
             return Config(
                 biosROM = data.biosROM.toFile(),
                 floppyImage = data.floppyImage?.toFile(),
