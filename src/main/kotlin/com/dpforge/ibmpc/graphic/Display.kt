@@ -13,12 +13,16 @@ import java.util.Timer
 import java.util.TimerTask
 import javax.swing.JFrame
 import javax.swing.JPanel
+import kotlin.system.exitProcess
+import org.slf4j.LoggerFactory
 
 class Display(
     private val videoRAM: VideoRAM,
     private val cga: CGA,
     keyListener: KeyListener,
 ) : JPanel() {
+
+    private val logger = LoggerFactory.getLogger("DISPLAY")
 
     private var lastMode: CGA.Mode = cga.mode
     private var rowCount = 0
@@ -45,7 +49,15 @@ class Display(
 
     override fun paintComponent(g: Graphics) {
         super.paintComponent(g)
+        try {
+            drawFrame(g)
+        } catch (t: Throwable) {
+            logger.error("Fail to draw frame", t)
+            exitProcess(1)
+        }
+    }
 
+    private fun drawFrame(g: Graphics) {
         if (lastMode != cga.mode) {
             onModeChanged(cga.mode)
             lastMode = cga.mode
