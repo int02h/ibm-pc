@@ -1,6 +1,7 @@
 package com.dpforge.ibmpc
 
 import com.dpforge.ibmpc.cpu.CPU
+import com.dpforge.ibmpc.drive.FloppyDrive
 import com.dpforge.ibmpc.extensions.toHex
 import com.dpforge.ibmpc.graphic.CGA
 import com.dpforge.ibmpc.graphic.Display
@@ -59,7 +60,13 @@ class PC(
             connect(GameAdapter())
             connect(ExternalDevices())
             connect(IgnoredPortDevice())
-            connect(FDC(pic))
+            connect(
+                FDC(
+                    pic = pic,
+                    dma = dma,
+                    driveA = config.floppyImage?.let { FloppyDrive(it.readBytes()) }
+                )
+            )
         }
 
         Display(videoRAM, cga, Keyboard(ppi))
