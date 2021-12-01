@@ -74,13 +74,13 @@ class DMA(
 
     private fun singleWrite(channel: Channel) {
         val request = channel.request ?: error("No request")
-        if (channel.wordCount > 0) {
+        if (channel.wordCount >= 0) {
             val b = request.getNextByte()
             memory.setByte(channel.physicalAddress, b)
             channel.address += channel.mode.direction.addressDiff
             channel.wordCount -= 1
         }
-        if (channel.wordCount == 0) {
+        if (channel.wordCount == 0xFFFF) {
             request.onTransferDone()
             channel.request = null
         }
@@ -242,7 +242,17 @@ class DMA(
         var request: Request? = null
 
         var address: Int = 0
+            get() = field and 0xFFFF
+            set(value) {
+                field = value and 0xFFFF
+            }
+
         var wordCount: Int = 0
+            get() = field and 0xFFFF
+            set(value) {
+                field = value and 0xFFFF
+            }
+
         var page: Int = 0
         var enabled = false
 
