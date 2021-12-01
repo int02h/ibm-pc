@@ -1,29 +1,40 @@
 package com.dpforge.ibmpc.drive
 
-class FloppyDrive(private val image: ByteArray) : Drive {
+class FloppyDrive(private val image: ByteArray) {
 
-    override fun read(
-        sectorsToRead: Int,
+    val sectorsPerTrack: Int = SECTORS_PER_TRACK
+
+    fun read(
+        buffer: ByteArray,
         cylinder: Int,
         head: Int,
         sector: Int,
         sectorSize: Int,
-        trackLength: Int,
-    ): ByteArray =
+    ): Int {
         image.part(
-            offset = sectorSize * chsToLba(cylinder, head, sector, trackLength),
-            length = sectorsToRead * sectorSize
+            destination = buffer,
+            offset = sectorSize * chsToLba(cylinder, head, sector),
+            length = sectorSize
         )
+        return sectorSize * chsToLba(cylinder, head, sector)
+    }
 
     // https://en.wikipedia.org/wiki/Cylinder-head-sector
     // https://en.wikipedia.org/wiki/Logical_block_addressing
-    private fun chsToLba(cylinder: Int, head: Int, sector: Int, trackLength: Int): Int =
-        (cylinder * HEAD_AMOUNT + head) * trackLength + (sector - 1)
+    private fun chsToLba(cylinder: Int, head: Int, sector: Int): Int =
+        (cylinder * HEAD_AMOUNT + head) * SECTORS_PER_TRACK + (sector - 1)
 
-    private fun ByteArray.part(offset: Int, length: Int) = copyOfRange(offset, offset + length)
+    private fun ByteArray.part(destination: ByteArray, offset: Int, length: Int) =
+        copyInto(
+            destination = destination,
+            destinationOffset = 0,
+            startIndex = offset,
+            endIndex = offset + length
+        )
 
     private companion object {
         const val HEAD_AMOUNT = 2
+        const val SECTORS_PER_TRACK = 9
     }
 
 }

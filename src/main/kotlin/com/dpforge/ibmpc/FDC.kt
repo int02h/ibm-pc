@@ -20,7 +20,7 @@ import org.slf4j.LoggerFactory
 class FDC(
     private val pic: PIC,
     private val dma: DMA,
-    private val driveA: FloppyDrive?,
+    driveA: FloppyDrive?,
 ) : PortDevice {
 
     private val logger = LoggerFactory.getLogger("FDC")
@@ -31,6 +31,8 @@ class FDC(
     private val status0 = Status0()
     private val status1 = Status1()
     private val status2 = Status2()
+
+    private val drives = arrayOf(Drive(driveA), Drive(null))
 
     private var enabled = false
     private var isBusy = false
@@ -65,6 +67,7 @@ class FDC(
             if (!enabled && fdcEnabled) {
                 isDataRegisterReady = true
                 wasReset = true
+                drives.forEach { drive -> drive.reset() }
                 pic.onHardwareInterrupt(0x6)
             }
 
@@ -111,9 +114,8 @@ class FDC(
                     0xF -> ParkHeadCommand()
                     else -> error("Unsupported command ${(value and 0xF).toHex()}")
                 }
-            } else {
-                inputs += value
             }
+            inputs += value
             pendingCommand?.let { command ->
                 if (inputs.size == command.argumentCount) {
                     isBusy = true
@@ -184,12 +186,12 @@ class FDC(
         abstract fun execute(input: List<Int>)
     }
 
-    private inner class FixDriveDataCommand : Command(2) {
+    private inner class FixDriveDataCommand : Command(3) {
         override fun execute(input: List<Int>) {
-            val stepRate = input[0].lowNibble
-            val headUnloadTime = input[0].highNibble
-            val headLoadTime = (input[1] shr 1) and 0b111_1111
-            val nonDMAMode = input[1].bit(0)
+            val stepRate = input[1].lowNibble
+            val headUnloadTime = input[1].highNibble
+            val headLoadTime = (input[2] shr 1) and 0b111_1111
+            val nonDMAMode = input[2].bit(0)
             logger.debug(
                 "Fix Drive Data: step rate = $stepRate" +
                         ", head unload time = $headUnloadTime" +
@@ -201,16 +203,20 @@ class FDC(
     }
 
 
-    private inner class ReadSectorCommand : Command(8) {
+    private inner class ReadSectorCommand : Command(9) {
         override fun execute(input: List<Int>) {
-            val drive = input[0] and 0b11
-            val cylinder = input[1]
-            val head = input[2]
-            val sector = input[3]
-            val sectorSize = input[4]
-            val trackLength = input[5]
-            val gap3Length = input[6]
-            val dataLength = input[7]
+            val isMultitrack = input[0].bit(7)
+
+            val driveIndex = input[1] and 0b11
+            val drive = drives[driveIndex]
+            drive.cylinder = input[2]
+            drive.head = input[3]
+            drive.sector = input[4]
+
+            val sectorSize = input[5]
+            val trackLength = input[6]
+            val gap3Length = input[7]
+            val dataLength = input[8]
 
             if (gap3Length != 42) {
                 error("GAP 3 value $gap3Length is not supported yet")
@@ -222,50 +228,50 @@ class FDC(
             val sectorSizeInBytes = 128 * (1 shl sectorSize)
 
             logger.debug(
-                "Read sector. Drive $drive" +
-                        ", cylinder = $cylinder" +
-                        ", head = $head" +
-                        ", sector = $sector" +
+                "Read sector. Drive $driveIndex" +
+                        ", cylinder = ${drive.cylinder}" +
+                        ", head = ${drive.head}" +
+                        ", sector = ${drive.sector}" +
                         ", sector size = $sectorSizeInBytes bytes" +
-                        ", track length = $trackLength"
+                        ", track length = $trackLength" +
+                        ", multi-track = $isMultitrack"
             )
 
-            if (driveA != null) {
-                val data = driveA.read(
-                    sectorsToRead = 1,
-                    cylinder = cylinder,
-                    head = head,
-                    sector = sector,
-                    sectorSize = sectorSizeInBytes,
-                    trackLength = trackLength
-                )
+            if (drive.isInserted) {
                 dma.setRequest(
                     channel = 2,
-                    request = DataRequest(data) {
-                        status0.set(drive = drive, head = head)
-                        setResult(
-                            listOf(
-                                status0.value,
-                                status1.value,
-                                status2.value,
-                                cylinder,
-                                head,
-                                sector,
-                                sectorSize
+                    request = DataRequest(
+                        drive = drive,
+                        isMultiTrack = isMultitrack,
+                        sectorSizeInBytes = sectorSizeInBytes,
+                        trackLength = trackLength,
+                        onDone = {
+                            logger.debug("Done reading sector")
+                            status0.set(drive = driveIndex, head = drive.head)
+                            setResult(
+                                listOf(
+                                    status0.value,
+                                    status1.value,
+                                    status2.value,
+                                    drive.cylinder,
+                                    drive.head,
+                                    drive.sector,
+                                    sectorSize
+                                )
                             )
-                        )
-                    }
+                        }
+                    )
                 )
             } else {
-                status0.set(drive = drive, head = head, interruptCode = 0b10)
+                status0.set(drive = driveIndex, head = drive.head, interruptCode = 0b10)
                 setResult(
                     listOf(
                         status0.value,
                         status1.value,
                         status2.value,
-                        cylinder,
-                        head,
-                        sector,
+                        drive.cylinder,
+                        drive.head,
+                        drive.sector,
                         sectorSize
                     )
                 )
@@ -274,19 +280,22 @@ class FDC(
 
     }
 
-    private inner class CalibrateCommand : Command(1) {
+    private inner class CalibrateCommand : Command(2) {
 
         override fun execute(input: List<Int>) {
-            val drive = input[0] and 0b11
-            status0.set(drive = drive, seekEnd = true)
+            val driveIndex = input[1] and 0b11
+            val drive = drives[driveIndex]
+            drive.cylinder = 0
+            status0.set(drive = driveIndex, seekEnd = true)
             logger.debug("Calibrate drive $drive")
             setResult(emptyList())
         }
 
     }
 
-    private inner class CheckInterruptStatusCommand : Command(0) {
+    private inner class CheckInterruptStatusCommand : Command(1) {
         override fun execute(input: List<Int>) {
+            logger.debug("Check interrupt status")
             setResult(
                 if (wasReset) {
                     wasReset = false
@@ -298,13 +307,14 @@ class FDC(
         }
     }
 
-    private inner class ParkHeadCommand : Command(2) {
+    private inner class ParkHeadCommand : Command(3) {
 
         override fun execute(input: List<Int>) {
-            val head = input[0].bitInt(3)
-            val drive = input[0] and 0b11
-            val cylinder = input[1]
-            logger.debug("Park head $head of drive $drive to cylinder $cylinder")
+            val driveIndex = input[1] and 0b11
+            val drive = drives[driveIndex]
+            drive.head = input[1].bitInt(3)
+            drive.cylinder = input[2]
+            logger.debug("Park head ${drive.head} of drive $driveIndex to cylinder ${drive.cylinder}")
             setResult(emptyList())
         }
 
@@ -315,14 +325,73 @@ class FDC(
         FROM_FDC
     }
 
-    private class DataRequest(val data: ByteArray, val onDone: () -> Unit) : DMA.Request {
+    private class Drive(
+        val floppyDrive: FloppyDrive?,
+    ) {
+        var cylinder: Int = 0
+        var head: Int = 0
+        var sector: Int = 1
 
-        private var index = 0
+        val isInserted: Boolean = floppyDrive != null
 
-        override fun getNextByte(): Int = data[index++].toInt() and 0xFF
+        fun ensureInserted() = floppyDrive ?: error("Drive not inserted")
+
+        fun reset() {
+            cylinder = 0
+            head = 0
+            sector = 1
+        }
+    }
+
+    private inner class DataRequest(
+        val drive: Drive,
+        val isMultiTrack: Boolean,
+        val sectorSizeInBytes: Int,
+        val trackLength: Int,
+        val onDone: () -> Unit
+    ) : DMA.Request {
+
+        private val data = ByteArray(sectorSizeInBytes)
+        private var index = -1
+
+        override fun getNextByte(): Int {
+            if (index == -1) {
+                readData()
+                index = 0
+            } else if (index >= data.size) {
+                moveToNextSector()
+                readData()
+                index = 0
+            }
+            return data[index++].toInt() and 0xFF
+        }
 
         override fun onTransferDone() {
             onDone()
+        }
+
+        private fun readData(): Int = drive.ensureInserted().read(
+            buffer = data,
+            cylinder = drive.cylinder,
+            head = drive.head,
+            sector = drive.sector,
+            sectorSize = sectorSizeInBytes,
+        )
+
+        private fun moveToNextSector() {
+            drive.sector++
+            if (drive.sector > trackLength || drive.sector > drive.ensureInserted().sectorsPerTrack) {
+                drive.sector = 1
+                if (isMultiTrack) {
+                    drive.head++
+                    if (drive.head > 1) {
+                        drive.head = 0
+                        drive.cylinder++
+                    }
+                } else {
+                    drive.cylinder++
+                }
+            }
         }
 
     }
