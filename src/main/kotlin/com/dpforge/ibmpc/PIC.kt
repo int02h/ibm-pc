@@ -49,7 +49,7 @@ class PIC : PortDevice {
     private var specialMaskMode: SpecialMaskMode? = null
 
     fun onHardwareInterrupt(irq: Int) {
-        interruptRequestRegister = interruptMaskRegister or (1 shl irq)
+        interruptRequestRegister = interruptRequestRegister.withBit(irq, true)
     }
 
     fun getPendingInterrupt(): Int? {
