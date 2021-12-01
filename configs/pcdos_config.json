@@ -1,0 +1,4 @@
+{
+  "bios_rom": "./bios/pcxtbios.bin",
+  "floppy_image": "./dos/pc-dos-3.20.img"
+}
