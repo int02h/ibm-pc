@@ -19,5 +19,6 @@
 <!--        <appender-ref ref="FILE" />-->
     </root>
 
-<!--    <logger name="PIC" level="OFF"/>-->
+    <logger name="PIC" level="OFF"/>
+    <logger name="PPI" level="OFF"/>
 </configuration>
