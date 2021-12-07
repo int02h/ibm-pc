@@ -68,12 +68,7 @@ class Display(
         val cursorRow = cga.cursorAddress / colCount
         val cursorCol = cga.cursorAddress % colCount
 
-        cga.onEndVerticalRetrace()
-
         for (row in 0 until rowCount) {
-
-            cga.onEndHorizontalRetrace()
-
             for (col in 0 until colCount) {
                 val cellIndex = (row * (colCount * 2)) + col * 2
                 val character = videoRAM.getByte(BASE_MEMORY_ADDRESS + cellIndex).toChar()
@@ -93,11 +88,7 @@ class Display(
                     g.drawString(character.toString(), col * cellWidth, row * cellHeight + fontMetrics.ascent)
                 }
             }
-
-            cga.onStartHorizontalRetrace()
         }
-
-        cga.onStartVerticalRetrace()
     }
 
     private fun onModeChanged(mode: CGA.Mode) {

@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory
  */
 class CGA(
     val memory: Memory,
+    val retraceSynchronizer: RetraceSynchronizer
 ) : PortDevice {
 
     private val logger = LoggerFactory.getLogger("CGA")
@@ -23,14 +24,11 @@ class CGA(
 
     private var backgroundColor = Color.BLACK
 
-    @Volatile
-    private var inHorizontalRetrace = true
-
-    @Volatile
-    private var inVerticalRetrace = true
-
     var mode: Mode = Mode.TEXT_80x25
-        private set
+        private set(value) {
+            field = value
+            retraceSynchronizer.setMode(mode)
+        }
 
     val cursorAddress: Int
         get() = (registers[REGISTER_CURSOR_ADDRESS_MSB] shl 8) or (registers[REGISTER_CURSOR_ADDRESS_LSB])
@@ -38,20 +36,8 @@ class CGA(
     val isCursorEnabled: Boolean
         get() = !registers[REGISTER_CURSOR_START].bit(5)
 
-    fun onStartVerticalRetrace() {
-        inVerticalRetrace = true
-    }
-
-    fun onEndVerticalRetrace() {
-        inVerticalRetrace = false
-    }
-
-    fun onStartHorizontalRetrace() {
-        inHorizontalRetrace = true
-    }
-
-    fun onEndHorizontalRetrace() {
-        inHorizontalRetrace = false
+    init {
+        retraceSynchronizer.setMode(mode)
     }
 
     override fun getPortMapping(): Map<Int, Port> = mapOf(
@@ -151,10 +137,10 @@ class CGA(
 
         override fun read(): Int {
             var status = 0
-            status = status.withBit(0, inHorizontalRetrace)
+            status = status.withBit(0, retraceSynchronizer.inHorizontalRetrace)
             // bit 1 - positive edge from light pen has set trigger
             // bit 2 - light pen switch is off
-            status = status.withBit(3, inVerticalRetrace)
+            status = status.withBit(3, retraceSynchronizer.inVerticalRetrace)
             // bit 4-7 not used
             return status
         }

@@ -1,17 +1,89 @@
 package com.dpforge.ibmpc.cpu
 
 import com.dpforge.ibmpc.ALU
-import com.dpforge.ibmpc.DMA
-import com.dpforge.ibmpc.memory.Memory
 import com.dpforge.ibmpc.PIC
-import com.dpforge.ibmpc.PIT
-import com.dpforge.ibmpc.port.Ports
-import com.dpforge.ibmpc.cpu.instruction.*
+import com.dpforge.ibmpc.cpu.instruction.AAA
+import com.dpforge.ibmpc.cpu.instruction.AAD
+import com.dpforge.ibmpc.cpu.instruction.AAM
+import com.dpforge.ibmpc.cpu.instruction.AAS
+import com.dpforge.ibmpc.cpu.instruction.ADC
+import com.dpforge.ibmpc.cpu.instruction.ADD
+import com.dpforge.ibmpc.cpu.instruction.AND
+import com.dpforge.ibmpc.cpu.instruction.CALL
+import com.dpforge.ibmpc.cpu.instruction.CALLF
+import com.dpforge.ibmpc.cpu.instruction.CBW
+import com.dpforge.ibmpc.cpu.instruction.CMP
+import com.dpforge.ibmpc.cpu.instruction.CWD
+import com.dpforge.ibmpc.cpu.instruction.CompareStrings
+import com.dpforge.ibmpc.cpu.instruction.DAA
+import com.dpforge.ibmpc.cpu.instruction.DAS
+import com.dpforge.ibmpc.cpu.instruction.DEC
+import com.dpforge.ibmpc.cpu.instruction.DIV
+import com.dpforge.ibmpc.cpu.instruction.DebugUtils
+import com.dpforge.ibmpc.cpu.instruction.FlagInstructions
+import com.dpforge.ibmpc.cpu.instruction.HLT
+import com.dpforge.ibmpc.cpu.instruction.IDIV
+import com.dpforge.ibmpc.cpu.instruction.IMUL
+import com.dpforge.ibmpc.cpu.instruction.IN
+import com.dpforge.ibmpc.cpu.instruction.INC
+import com.dpforge.ibmpc.cpu.instruction.INT
+import com.dpforge.ibmpc.cpu.instruction.JA
+import com.dpforge.ibmpc.cpu.instruction.JB
+import com.dpforge.ibmpc.cpu.instruction.JBE
+import com.dpforge.ibmpc.cpu.instruction.JCXZ
+import com.dpforge.ibmpc.cpu.instruction.JE
+import com.dpforge.ibmpc.cpu.instruction.JG
+import com.dpforge.ibmpc.cpu.instruction.JGE
+import com.dpforge.ibmpc.cpu.instruction.JL
+import com.dpforge.ibmpc.cpu.instruction.JLE
+import com.dpforge.ibmpc.cpu.instruction.JMP
+import com.dpforge.ibmpc.cpu.instruction.JMPF
+import com.dpforge.ibmpc.cpu.instruction.JNC
+import com.dpforge.ibmpc.cpu.instruction.JNE
+import com.dpforge.ibmpc.cpu.instruction.JNO
+import com.dpforge.ibmpc.cpu.instruction.JNP
+import com.dpforge.ibmpc.cpu.instruction.JNS
+import com.dpforge.ibmpc.cpu.instruction.JO
+import com.dpforge.ibmpc.cpu.instruction.JP
+import com.dpforge.ibmpc.cpu.instruction.JS
+import com.dpforge.ibmpc.cpu.instruction.LEA
+import com.dpforge.ibmpc.cpu.instruction.LODS
+import com.dpforge.ibmpc.cpu.instruction.LOOP
+import com.dpforge.ibmpc.cpu.instruction.LOOPNZ
+import com.dpforge.ibmpc.cpu.instruction.LOOPZ
+import com.dpforge.ibmpc.cpu.instruction.LoadFarPointer
+import com.dpforge.ibmpc.cpu.instruction.MOV
+import com.dpforge.ibmpc.cpu.instruction.MOVS
+import com.dpforge.ibmpc.cpu.instruction.MUL
+import com.dpforge.ibmpc.cpu.instruction.NEG
+import com.dpforge.ibmpc.cpu.instruction.NOT
+import com.dpforge.ibmpc.cpu.instruction.OR
+import com.dpforge.ibmpc.cpu.instruction.OUT
+import com.dpforge.ibmpc.cpu.instruction.POP
+import com.dpforge.ibmpc.cpu.instruction.PUSH
+import com.dpforge.ibmpc.cpu.instruction.RCL
+import com.dpforge.ibmpc.cpu.instruction.RCR
+import com.dpforge.ibmpc.cpu.instruction.ROL
+import com.dpforge.ibmpc.cpu.instruction.ROR
+import com.dpforge.ibmpc.cpu.instruction.Return
+import com.dpforge.ibmpc.cpu.instruction.SAR
+import com.dpforge.ibmpc.cpu.instruction.SBB
+import com.dpforge.ibmpc.cpu.instruction.SCAS
+import com.dpforge.ibmpc.cpu.instruction.SHL
+import com.dpforge.ibmpc.cpu.instruction.SHR
+import com.dpforge.ibmpc.cpu.instruction.STOS
+import com.dpforge.ibmpc.cpu.instruction.SUB
+import com.dpforge.ibmpc.cpu.instruction.TEST
+import com.dpforge.ibmpc.cpu.instruction.XCHG
+import com.dpforge.ibmpc.cpu.instruction.XLAT
+import com.dpforge.ibmpc.cpu.instruction.XOR
 import com.dpforge.ibmpc.cpu.timing.Timing
 import com.dpforge.ibmpc.cpu.timing.Timing.StringOperationTiming
 import com.dpforge.ibmpc.extensions.higherWord
 import com.dpforge.ibmpc.extensions.lowerWord
 import com.dpforge.ibmpc.extensions.toHex
+import com.dpforge.ibmpc.memory.Memory
+import com.dpforge.ibmpc.port.Ports
 import com.dpforge.ibmpc.utils.impossible
 import org.slf4j.LoggerFactory
 
@@ -19,8 +91,7 @@ class CPU(
     val memory: Memory,
     val ports: Ports,
     val pic: PIC,
-    val pit: PIT,
-    val dma: DMA,
+    private val cycleListener: CPUCycleListener,
 ) {
 
     private val logger = LoggerFactory.getLogger("CPU")
@@ -61,8 +132,7 @@ class CPU(
 
         while (clocks > 3) {
             clocks -= 4
-            pit.update()
-            dma.onCPUCycle()
+            cycleListener.onCPUCycle()
         }
     }
 

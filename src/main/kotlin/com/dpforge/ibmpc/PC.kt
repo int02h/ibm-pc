@@ -6,6 +6,7 @@ import com.dpforge.ibmpc.extensions.toHex
 import com.dpforge.ibmpc.graphic.CGA
 import com.dpforge.ibmpc.graphic.Display
 import com.dpforge.ibmpc.graphic.MDA
+import com.dpforge.ibmpc.graphic.RetraceSynchronizer
 import com.dpforge.ibmpc.memory.BiosROM
 import com.dpforge.ibmpc.memory.ConventionalMemory
 import com.dpforge.ibmpc.memory.Memory
@@ -35,7 +36,8 @@ class PC(
 
         val pic = PIC()
         val pit = PIT(pic)
-        val cga = CGA(memory)
+        val retraceSynchronizer = RetraceSynchronizer()
+        val cga = CGA(memory, retraceSynchronizer)
         val dma = DMA(memory)
 
         val ppi = PPI(
@@ -71,7 +73,16 @@ class PC(
 
         Display(videoRAM, cga, Keyboard(ppi))
 
-        cpu = CPU(memory, ports, pic, pit, dma)
+        cpu = CPU(
+            memory = memory,
+            ports = ports,
+            pic = pic,
+            cycleListener = {
+                pit.update()
+                dma.onCPUCycle()
+                retraceSynchronizer.onCPUCycle()
+            }
+        )
     }
 
     fun start() {
