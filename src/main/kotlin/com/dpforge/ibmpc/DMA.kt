@@ -68,15 +68,29 @@ class DMA(
         when (channel.mode.operation) {
             Mode.Operation.VERIFY -> TODO()
             Mode.Operation.WRITE -> singleWrite(channel)
-            Mode.Operation.READ -> TODO()
+            Mode.Operation.READ -> singleRead(channel)
             Mode.Operation.RESERVED -> TODO()
         }
 
     private fun singleWrite(channel: Channel) {
         val request = channel.request ?: error("No request")
         if (channel.wordCount >= 0) {
-            val b = request.getNextByte()
+            val b = request.readNextByte()
             memory.setByte(channel.physicalAddress, b)
+            channel.address += channel.mode.direction.addressDiff
+            channel.wordCount -= 1
+        }
+        if (channel.wordCount == 0xFFFF) {
+            request.onTransferDone()
+            channel.request = null
+        }
+    }
+
+    private fun singleRead(channel: Channel) {
+        val request = channel.request ?: error("No request")
+        if (channel.wordCount >= 0) {
+            val b = memory.getByte(channel.physicalAddress)
+            request.writeNextByte(b)
             channel.address += channel.mode.direction.addressDiff
             channel.wordCount -= 1
         }
@@ -307,7 +321,8 @@ class DMA(
     }
 
     interface Request {
-        fun getNextByte(): Int
+        fun readNextByte(): Int
+        fun writeNextByte(byte: Int)
         fun onTransferDone()
     }
 

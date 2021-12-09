@@ -19,6 +19,17 @@ class FloppyDrive(private val image: ByteArray) {
         return sectorSize * chsToLba(cylinder, head, sector)
     }
 
+    fun write(
+        data: ByteArray,
+        cylinder: Int,
+        head: Int,
+        sector: Int,
+        sectorSize: Int,
+    ) {
+        val offset = sectorSize * chsToLba(cylinder, head, sector)
+        data.copyInto(image, offset)
+    }
+
     // https://en.wikipedia.org/wiki/Cylinder-head-sector
     // https://en.wikipedia.org/wiki/Logical_block_addressing
     private fun chsToLba(cylinder: Int, head: Int, sector: Int): Int =

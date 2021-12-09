@@ -61,6 +61,7 @@ class FDC(
                 "Digital Output Register. " +
                         "disk = $disk" +
                         ", FDC enabled = $fdcEnabled" +
+                        ", DMA enabled = $dmaEnabled" +
                         ", drive motor enabled = ${driveMotorEnabled.contentToString()}"
             )
 
@@ -108,6 +109,7 @@ class FDC(
                 results.clear()
                 pendingCommand = when (value and 0xF) {
                     0x3 -> FixDriveDataCommand()
+                    0x5 -> WriteSectorCommand()
                     0x6 -> ReadSectorCommand()
                     0x7 -> CalibrateCommand()
                     0x8 -> CheckInterruptStatusCommand()
@@ -202,10 +204,20 @@ class FDC(
         }
     }
 
+    private abstract inner class AbstractSectorCommand : Command(9) {
 
-    private inner class ReadSectorCommand : Command(9) {
+        protected abstract fun log(message: String)
+
+        protected abstract fun createDataRequest(
+            drive: Drive,
+            isMultiTrack: Boolean,
+            sectorSizeInBytes: Int,
+            trackLength: Int,
+            onDone: () -> Unit
+        ): DMA.Request
+
         override fun execute(input: List<Int>) {
-            val isMultitrack = input[0].bit(7)
+            val isMultiTrack = input[0].bit(7)
 
             val driveIndex = input[1] and 0b11
             val drive = drives[driveIndex]
@@ -227,26 +239,26 @@ class FDC(
 
             val sectorSizeInBytes = 128 * (1 shl sectorSize)
 
-            logger.debug(
-                "Read sector. Drive $driveIndex" +
+            log(
+                "Start execution. Drive $driveIndex" +
                         ", cylinder = ${drive.cylinder}" +
                         ", head = ${drive.head}" +
                         ", sector = ${drive.sector}" +
                         ", sector size = $sectorSizeInBytes bytes" +
                         ", track length = $trackLength" +
-                        ", multi-track = $isMultitrack"
+                        ", multi-track = $isMultiTrack"
             )
 
             if (drive.isInserted) {
                 dma.setRequest(
                     channel = 2,
-                    request = DataRequest(
+                    request = createDataRequest(
                         drive = drive,
-                        isMultiTrack = isMultitrack,
+                        isMultiTrack = isMultiTrack,
                         sectorSizeInBytes = sectorSizeInBytes,
                         trackLength = trackLength,
                         onDone = {
-                            logger.debug("Done reading sector")
+                            log("Done")
                             status0.set(drive = driveIndex, head = drive.head)
                             setResult(
                                 listOf(
@@ -277,6 +289,49 @@ class FDC(
                 )
             }
         }
+    }
+
+    private inner class WriteSectorCommand : AbstractSectorCommand() {
+
+        override fun log(message: String) {
+            logger.debug("[Write sector] $message")
+        }
+
+        override fun createDataRequest(
+            drive: Drive,
+            isMultiTrack: Boolean,
+            sectorSizeInBytes: Int,
+            trackLength: Int,
+            onDone: () -> Unit
+        ): DMA.Request = WriteDataRequest(
+            drive = drive,
+            isMultiTrack = isMultiTrack,
+            sectorSizeInBytes = sectorSizeInBytes,
+            trackLength = trackLength,
+            onDone = onDone,
+        )
+
+    }
+
+    private inner class ReadSectorCommand : AbstractSectorCommand() {
+
+        override fun log(message: String) {
+            logger.debug("[Read sector] $message")
+        }
+
+        override fun createDataRequest(
+            drive: Drive,
+            isMultiTrack: Boolean,
+            sectorSizeInBytes: Int,
+            trackLength: Int,
+            onDone: () -> Unit
+        ): DMA.Request = ReadDataRequest(
+            drive = drive,
+            isMultiTrack = isMultiTrack,
+            sectorSizeInBytes = sectorSizeInBytes,
+            trackLength = trackLength,
+            onDone = onDone,
+        )
 
     }
 
@@ -343,42 +398,13 @@ class FDC(
         }
     }
 
-    private inner class DataRequest(
+    private abstract class AbstractDataRequest(
         val drive: Drive,
         val isMultiTrack: Boolean,
-        val sectorSizeInBytes: Int,
         val trackLength: Int,
-        val onDone: () -> Unit
     ) : DMA.Request {
 
-        private val data = ByteArray(sectorSizeInBytes)
-        private var index = -1
-
-        override fun getNextByte(): Int {
-            if (index == -1) {
-                readData()
-                index = 0
-            } else if (index >= data.size) {
-                moveToNextSector()
-                readData()
-                index = 0
-            }
-            return data[index++].toInt() and 0xFF
-        }
-
-        override fun onTransferDone() {
-            onDone()
-        }
-
-        private fun readData(): Int = drive.ensureInserted().read(
-            buffer = data,
-            cylinder = drive.cylinder,
-            head = drive.head,
-            sector = drive.sector,
-            sectorSize = sectorSizeInBytes,
-        )
-
-        private fun moveToNextSector() {
+        protected fun moveToNextSector() {
             drive.sector++
             if (drive.sector > trackLength || drive.sector > drive.ensureInserted().sectorsPerTrack) {
                 drive.sector = 1
@@ -393,6 +419,88 @@ class FDC(
                 }
             }
         }
+
+    }
+
+    private class WriteDataRequest(
+        drive: Drive,
+        isMultiTrack: Boolean,
+        val sectorSizeInBytes: Int,
+        trackLength: Int,
+        val onDone: () -> Unit
+    ) : AbstractDataRequest(drive, isMultiTrack, trackLength) {
+
+        private val data = ByteArray(sectorSizeInBytes)
+        private var index = 0
+
+        override fun readNextByte(): Int {
+            error("This is write request")
+        }
+
+        override fun writeNextByte(byte: Int) {
+            data[index++] = (byte and 0xFF).toByte()
+            if (index == data.size) {
+                writeData()
+                moveToNextSector()
+                index = 0
+            }
+        }
+
+        override fun onTransferDone() {
+            if (index > 0) {
+                TODO("Data is partially filled")
+            }
+            onDone()
+        }
+
+        private fun writeData(): Unit = drive.ensureInserted().write(
+            data = data,
+            cylinder = drive.cylinder,
+            head = drive.head,
+            sector = drive.sector,
+            sectorSize = sectorSizeInBytes,
+        )
+
+    }
+
+    private inner class ReadDataRequest(
+        drive: Drive,
+        isMultiTrack: Boolean,
+        val sectorSizeInBytes: Int,
+        trackLength: Int,
+        val onDone: () -> Unit
+    ) : AbstractDataRequest(drive, isMultiTrack, trackLength) {
+
+        private val data = ByteArray(sectorSizeInBytes)
+        private var index = -1
+
+        override fun readNextByte(): Int {
+            if (index == -1) {
+                readData()
+                index = 0
+            } else if (index >= data.size) {
+                moveToNextSector()
+                readData()
+                index = 0
+            }
+            return data[index++].toInt() and 0xFF
+        }
+
+        override fun writeNextByte(byte: Int) {
+            error("This is read request")
+        }
+
+        override fun onTransferDone() {
+            onDone()
+        }
+
+        private fun readData(): Int = drive.ensureInserted().read(
+            buffer = data,
+            cylinder = drive.cylinder,
+            head = drive.head,
+            sector = drive.sector,
+            sectorSize = sectorSizeInBytes,
+        )
 
     }
 }
