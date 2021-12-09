@@ -43,7 +43,8 @@ class PC(
         val ppi = PPI(
             pic = pic,
             equipment = PPI.Equipment(
-                hasBootDrive = config.floppyImage != null
+                hasBootFloppyDrive = config.driveA != null,
+                floppyDriveAmount = listOf(config.driveA, config.driveB).count { it != null }
             )
         )
 
@@ -66,7 +67,8 @@ class PC(
                 FDC(
                     pic = pic,
                     dma = dma,
-                    driveA = config.floppyImage?.let { FloppyDrive(it.readBytes()) }
+                    driveA = config.driveA?.let { FloppyDrive(it.readBytes()) },
+                    driveB = config.driveB?.let { FloppyDrive(it.readBytes()) },
                 )
             )
         }

@@ -9,7 +9,8 @@ import kotlinx.serialization.json.Json
 
 class Config private constructor(
     val biosROM: File,
-    val floppyImage: File?,
+    val driveA: File?,
+    val driveB: File?,
     val cassetteBASICImages: List<File>?
 ) {
     companion object {
@@ -21,7 +22,8 @@ class Config private constructor(
         @Serializable
         private class Data(
             @SerialName("bios_rom") val biosROM: String,
-            @SerialName("floppy_image") val floppyImage: String? = null,
+            @SerialName("drive_a") val driveA: String? = null,
+            @SerialName("drive_b") val driveB: String? = null,
             @SerialName("cassette_basic") val cassetteBASICImages: List<String>? = null,
         )
 
@@ -30,7 +32,8 @@ class Config private constructor(
             val data = json.decodeFromString<Data>(content)
             return Config(
                 biosROM = data.biosROM.toFile(),
-                floppyImage = data.floppyImage?.toFile(),
+                driveA = data.driveA?.toFile(),
+                driveB = data.driveB?.toFile(),
                 cassetteBASICImages = data.cassetteBASICImages?.map { it.toFile() }
             )
         }

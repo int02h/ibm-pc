@@ -1,4 +1,4 @@
 {
   "bios_rom": "./bios/pcxtbios.bin",
-  "floppy_image": "/Users/dpopov/Projects/thirdparty/8086-accuracy/8086ac.img"
+  "drive_a": "/Users/dpopov/Projects/thirdparty/8086-accuracy/8086ac.img"
 }

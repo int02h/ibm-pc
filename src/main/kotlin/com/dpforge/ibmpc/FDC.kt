@@ -21,6 +21,7 @@ class FDC(
     private val pic: PIC,
     private val dma: DMA,
     driveA: FloppyDrive?,
+    driveB: FloppyDrive?,
 ) : PortDevice {
 
     private val logger = LoggerFactory.getLogger("FDC")
@@ -32,7 +33,7 @@ class FDC(
     private val status1 = Status1()
     private val status2 = Status2()
 
-    private val drives = arrayOf(Drive(driveA), Drive(null))
+    private val drives = arrayOf(Drive(driveA), Drive(driveB))
 
     private var enabled = false
     private var isBusy = false
