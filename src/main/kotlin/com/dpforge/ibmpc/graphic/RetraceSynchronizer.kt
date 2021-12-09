@@ -23,8 +23,13 @@ class RetraceSynchronizer {
     private var rowStartTimeNanos = 0L
     private var rowIndex = 0L
 
+    private var prevMode: CGA.Mode? = null
+
     // https://www.vcfed.org/forum/forum/technical-support/vintage-computer-programming/71067-cga-timing-issue?p=861219#post861219
     fun setMode(mode: CGA.Mode) {
+        if (mode == prevMode) {
+            return
+        }
         when (mode) {
             CGA.Mode.TEXT_80x25 -> {
                 verticalRetraceDurationNanos = millisToNanos(1.25)
@@ -47,6 +52,7 @@ class RetraceSynchronizer {
 
         modeSet = true
         cpuCycles = 0L
+        prevMode = mode
     }
 
     fun onCPUCycle() {
