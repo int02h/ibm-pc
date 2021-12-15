@@ -1,8 +1,11 @@
 package com.dpforge.ibmpc.drive
 
-class FloppyDrive(private val image: ByteArray) {
+class FloppyDrive(
+    private val image: ByteArray,
+    private val format: FloppyDriveFormat,
+) {
 
-    val sectorsPerTrack: Int = SECTORS_PER_TRACK
+    val sectorsPerTrack: Int = format.sectorsPerTrack
 
     fun read(
         buffer: ByteArray,
@@ -11,6 +14,9 @@ class FloppyDrive(private val image: ByteArray) {
         sector: Int,
         sectorSize: Int,
     ): Int {
+        if (format.sectorSize != sectorSize) {
+            error("Expected sector size is ${format.sectorSize} but was $sectorSize")
+        }
         image.part(
             destination = buffer,
             offset = sectorSize * chsToLba(cylinder, head, sector),
@@ -26,6 +32,9 @@ class FloppyDrive(private val image: ByteArray) {
         sector: Int,
         sectorSize: Int,
     ) {
+        if (format.sectorSize != sectorSize) {
+            error("Expected sector size is ${format.sectorSize} but was $sectorSize")
+        }
         val offset = sectorSize * chsToLba(cylinder, head, sector)
         data.copyInto(image, offset)
     }
@@ -33,7 +42,7 @@ class FloppyDrive(private val image: ByteArray) {
     // https://en.wikipedia.org/wiki/Cylinder-head-sector
     // https://en.wikipedia.org/wiki/Logical_block_addressing
     private fun chsToLba(cylinder: Int, head: Int, sector: Int): Int =
-        (cylinder * HEAD_AMOUNT + head) * SECTORS_PER_TRACK + (sector - 1)
+        (cylinder * format.headAmount + head) * format.sectorsPerTrack + (sector - 1)
 
     private fun ByteArray.part(destination: ByteArray, offset: Int, length: Int) =
         copyInto(
@@ -42,10 +51,5 @@ class FloppyDrive(private val image: ByteArray) {
             startIndex = offset,
             endIndex = offset + length
         )
-
-    private companion object {
-        const val HEAD_AMOUNT = 2
-        const val SECTORS_PER_TRACK = 9
-    }
 
 }

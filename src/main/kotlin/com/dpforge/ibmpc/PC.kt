@@ -2,6 +2,7 @@ package com.dpforge.ibmpc
 
 import com.dpforge.ibmpc.cpu.CPU
 import com.dpforge.ibmpc.drive.FloppyDrive
+import com.dpforge.ibmpc.drive.FloppyDriveFormat
 import com.dpforge.ibmpc.extensions.toHex
 import com.dpforge.ibmpc.graphic.CGA
 import com.dpforge.ibmpc.graphic.Display
@@ -67,8 +68,8 @@ class PC(
                 FDC(
                     pic = pic,
                     dma = dma,
-                    driveA = config.driveA?.let { FloppyDrive(it.readBytes()) },
-                    driveB = config.driveB?.let { FloppyDrive(it.readBytes()) },
+                    driveA = config.driveA?.let { createFloppyDrive(it) },
+                    driveB = config.driveB?.let { createFloppyDrive(it) },
                 )
             )
         }
@@ -112,5 +113,17 @@ class PC(
         }
         return basic
     }
+
+    private fun createFloppyDrive(file: File): FloppyDrive {
+        val image = file.readBytes()
+        return FloppyDrive(
+            image = image,
+            format = detectFloppyDriveFormat(image.size)
+        )
+    }
+
+    private fun detectFloppyDriveFormat(imageSize: Int) =
+        FloppyDriveFormat.values().find { format -> format.capacityBytes == imageSize }
+            ?: error("Cannot detect floppy drive format for image size $imageSize bytes")
 
 }
