@@ -97,7 +97,7 @@ sealed class AddressingMode(val reg: Int, val byteCount: Int) {
                     reg = reg,
                     timing = AddressingModeTiming.BX_SI_DISPLACEMENT
                 )
-                1 -> cpu.createRwIwIndirectMemoryMode(
+                1 -> cpu.createRwIbIndirectMemoryMode(
                     segmentRegister = SegmentRegister.DS,
                     effectiveAddress = cpu.registers.bx + cpu.registers.di + b,
                     reg = reg,
@@ -146,6 +146,12 @@ sealed class AddressingMode(val reg: Int, val byteCount: Int) {
         private fun getRwIwIndirect(cpu: CPU, rm: Int, reg: Int): AddressingMode {
             val w = cpu.memory.getWord(cpu.codeOffset + 2).toShort()
             return when (rm) {
+                0 -> cpu.createRwIwIndirectMemoryMode(
+                    segmentRegister = SegmentRegister.DS,
+                    effectiveAddress = cpu.registers.get(Register16.BX) + cpu.registers.get(Register16.SI) + w,
+                    reg = reg,
+                    timing = AddressingModeTiming.BX_SI_DISPLACEMENT
+                )
                 1 -> cpu.createRwIwIndirectMemoryMode(
                     segmentRegister = SegmentRegister.DS,
                     effectiveAddress = cpu.registers.bx + cpu.registers.di + w,
