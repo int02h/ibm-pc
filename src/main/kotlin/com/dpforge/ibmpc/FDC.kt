@@ -42,6 +42,7 @@ class FDC(
     private var pendingCommand: Command? = null
     private var wasReset = false
     private var dmaEnabled = false
+    private var currentDisk = -1
 
     override fun getPortMapping(): Map<Int, Port> = mapOf(
         0x3f2 to DigitalOutputRegister(),
@@ -52,7 +53,7 @@ class FDC(
     private inner class DigitalOutputRegister : WriteOnlyPort() {
 
         override fun write(value: Int) {
-            val disk = value and 0b11
+            currentDisk = value and 0b11
             val fdcEnabled = value.bit(2)
             dmaEnabled = value.bit(3)
             val driveMotorEnabled = booleanArrayOf(value.bit(4), value.bit(5))
@@ -60,7 +61,7 @@ class FDC(
 
             logger.debug(
                 "Digital Output Register. " +
-                        "disk = $disk" +
+                        "current disk = $currentDisk" +
                         ", FDC enabled = $fdcEnabled" +
                         ", DMA enabled = $dmaEnabled" +
                         ", drive motor enabled = ${driveMotorEnabled.contentToString()}"
