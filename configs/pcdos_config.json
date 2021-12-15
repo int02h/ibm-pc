@@ -1,7 +1,7 @@
 {
   "bios_rom": "./bios/pcxtbios.bin",
   "drive_a": "./dos/pc-dos-3.20.img",
-  "drive_b": "./dos/101-MONOCHROME-MAZES.dmg",
+  "drive_b": "./dos/CASTLE-ADVENTURE-1985.dmg",
   "cassette_basic": [
     "./CasetteBASIC/5150cb10_1.bin",
     "./CasetteBASIC/5150cb10_2.bin",
