@@ -32,13 +32,14 @@ class Display(
     private var cellHeight = 0
 
     private var fontMetrics: FontMetrics? = null
+    private val frame = JFrame()
 
     init {
         onModeChanged(cga.mode)
-        val frame = JFrame()
         frame.add(this)
         frame.addKeyListener(keyListener)
         frame.pack()
+        frame.isResizable = false
         frame.isVisible = true
         frame.defaultCloseOperation = JFrame.EXIT_ON_CLOSE
         Timer().scheduleAtFixedRate(object : TimerTask() {
@@ -108,7 +109,7 @@ class Display(
         }
 
         preferredSize = Dimension(2 * preferredSize.width, 2 * preferredSize.height)
-        size = preferredSize
+        frame.size = preferredSize
 
         cellWidth = preferredSize.width / colCount
         cellHeight = preferredSize.height / rowCount
