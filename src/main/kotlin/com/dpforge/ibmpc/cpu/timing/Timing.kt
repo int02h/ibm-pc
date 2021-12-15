@@ -32,6 +32,7 @@ object Timing {
     fun intoSkipped() = 4
     fun intoCalled() = 73
     fun intImm() = 71
+    fun int3() = 72
 
     fun pushSeg() = 14
     fun pushf() = 14

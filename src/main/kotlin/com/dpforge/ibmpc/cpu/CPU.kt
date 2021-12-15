@@ -350,7 +350,7 @@ class CPU(
             0xC9 -> error("Opcode ${opcode.toHex()} is no supported on 8086")
             0xCA -> Return.retfIw(this)
             0xCB -> Return.retf(this)
-            0xCC -> TODO("INT 3")
+            0xCC -> INT.int3(this)
             0xCD -> INT.ib(this)
             0xCE -> INT.into(this)
             0xCF -> Return.iret(this)
