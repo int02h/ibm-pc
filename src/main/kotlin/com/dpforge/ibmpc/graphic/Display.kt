@@ -9,6 +9,7 @@ import java.awt.Font
 import java.awt.FontMetrics
 import java.awt.Graphics
 import java.awt.event.KeyListener
+import java.awt.geom.AffineTransform
 import java.util.Timer
 import java.util.TimerTask
 import javax.swing.JFrame
@@ -116,6 +117,7 @@ class Display(
             // Use CP437 TrueType font.
             font = Font.createFont(Font.TRUETYPE_FONT, javaClass.classLoader.getResourceAsStream("cp437.ttf"))
                 .deriveFont(cellHeight.toFloat())
+                .deriveFont(AffineTransform.getScaleInstance(2.0, 1.0))
         } catch (e: Exception) {
             error("Fail to load custom font: $e")
         }
