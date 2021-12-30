@@ -23,6 +23,7 @@ class Display(
     keyListener: KeyListener,
 ) : JPanel() {
 
+    private val displaySize = Dimension(640, 400)
     private val logger = LoggerFactory.getLogger("DISPLAY")
 
     private var lastMode: CGA.Mode = cga.mode
@@ -35,7 +36,9 @@ class Display(
     private val frame = JFrame()
 
     init {
+        preferredSize = displaySize
         onModeChanged(cga.mode)
+
         frame.add(this)
         frame.addKeyListener(keyListener)
         frame.pack()
@@ -94,31 +97,30 @@ class Display(
     }
 
     private fun onModeChanged(mode: CGA.Mode) {
+        val resolution: Dimension
         when (mode) {
             CGA.Mode.TEXT_80x25 -> {
                 colCount = 80
                 rowCount = 25
-                preferredSize = Dimension(640, 200)
+                resolution = Dimension(640, 200)
             }
             CGA.Mode.TEXT_40x25 -> {
                 colCount = 40
                 rowCount = 25
-                preferredSize = Dimension(320, 200)
+                resolution = Dimension(320, 200)
             }
             else -> error("Mode is not supported yet: $mode")
         }
-
-        preferredSize = Dimension(2 * preferredSize.width, 2 * preferredSize.height)
-        frame.size = preferredSize
 
         cellWidth = preferredSize.width / colCount
         cellHeight = preferredSize.height / rowCount
 
         try {
+            val fontScaleX = displaySize.width.toDouble() / resolution.width
             // Use CP437 TrueType font.
             font = Font.createFont(Font.TRUETYPE_FONT, javaClass.classLoader.getResourceAsStream("cp437.ttf"))
                 .deriveFont(cellHeight.toFloat())
-                .deriveFont(AffineTransform.getScaleInstance(2.0, 1.0))
+                .deriveFont(AffineTransform.getScaleInstance(fontScaleX, 1.0))
         } catch (e: Exception) {
             error("Fail to load custom font: $e")
         }
