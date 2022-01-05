@@ -226,11 +226,7 @@ class PIC : PortDevice {
     inner class NMIMaskRegister : Port {
 
         override fun write(value: Int) {
-            if (value == 80) {
-                nmiEnabled = true
-            } else if (value == 0) {
-                nmiEnabled = false
-            }
+            nmiEnabled = value.bit(7)
         }
 
         override fun read(): Int {
