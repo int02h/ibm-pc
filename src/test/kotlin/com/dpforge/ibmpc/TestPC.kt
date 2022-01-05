@@ -32,8 +32,7 @@ class TestPC(
             memory = memory,
             ports = ports,
             pic = pic,
-            pit = PIT(pic),
-            dma = dma
+            cycleListener = { dma.onCPUCycle() }
         )
         cpu.reset()
 
