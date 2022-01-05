@@ -1,15 +1,10 @@
 package com.dpforge.ibmpc.graphic
 
-import com.dpforge.ibmpc.extensions.highNibble
-import com.dpforge.ibmpc.extensions.lowNibble
 import com.dpforge.ibmpc.memory.VideoRAM
 import java.awt.Color
 import java.awt.Dimension
-import java.awt.Font
-import java.awt.FontMetrics
 import java.awt.Graphics
 import java.awt.event.KeyListener
-import java.awt.geom.AffineTransform
 import java.util.Timer
 import java.util.TimerTask
 import javax.swing.JFrame
@@ -26,18 +21,13 @@ class Display(
     private val displaySize = Dimension(640, 400)
     private val logger = LoggerFactory.getLogger("DISPLAY")
 
-    private var lastMode: CGA.Mode = cga.mode
-    private var rowCount = 0
-    private var colCount = 0
-    private var cellWidth = 0
-    private var cellHeight = 0
-
-    private var fontMetrics: FontMetrics? = null
+    private var lastMode: CGA.Mode? = null
     private val frame = JFrame()
+
+    private lateinit var frameDrawer: FrameDrawer
 
     init {
         preferredSize = displaySize
-        onModeChanged(cga.mode)
 
         frame.add(this)
         frame.addKeyListener(keyListener)
@@ -68,61 +58,17 @@ class Display(
             lastMode = cga.mode
         }
 
-        val fontMetrics = fontMetrics ?: g.fontMetrics.also { fontMetrics = it }
-
-        val cursorRow = cga.cursorAddress / colCount
-        val cursorCol = cga.cursorAddress % colCount
-
-        for (row in 0 until rowCount) {
-            for (col in 0 until colCount) {
-                val cellIndex = (row * (colCount * 2)) + col * 2
-                val character = videoRAM.getByte(BASE_MEMORY_ADDRESS + cellIndex).toChar()
-                val attribute = videoRAM.getByte(BASE_MEMORY_ADDRESS + cellIndex + 1)
-
-                // draw cell background
-                g.color = COLORS[attribute.highNibble]
-                g.fillRect(col * cellWidth, row * cellHeight, cellWidth, cellHeight)
-
-                // draw cell foreground
-                g.color = COLORS[attribute.lowNibble]
-
-                val cursorTime = System.currentTimeMillis() % 1000 >= 500
-                if (cga.isCursorEnabled && cursorTime && row == cursorRow && col == cursorCol) {
-                    g.drawString("_", col * cellWidth, row * cellHeight + fontMetrics.ascent)
-                } else {
-                    g.drawString(character.toString(), col * cellWidth, row * cellHeight + fontMetrics.ascent)
-                }
-            }
-        }
+        frameDrawer.drawFrame(g)
     }
 
     private fun onModeChanged(mode: CGA.Mode) {
-        val resolution: Dimension
-        when (mode) {
-            CGA.Mode.TEXT_80x25 -> {
-                colCount = 80
-                rowCount = 25
-                resolution = Dimension(640, 200)
-            }
-            CGA.Mode.TEXT_40x25 -> {
-                colCount = 40
-                rowCount = 25
-                resolution = Dimension(320, 200)
-            }
-            else -> error("Mode is not supported yet: $mode")
-        }
-
-        cellWidth = preferredSize.width / colCount
-        cellHeight = preferredSize.height / rowCount
-
-        try {
-            val fontScaleX = displaySize.width.toDouble() / resolution.width
-            // Use CP437 TrueType font.
-            font = Font.createFont(Font.TRUETYPE_FONT, javaClass.classLoader.getResourceAsStream("cp437.ttf"))
-                .deriveFont(cellHeight.toFloat())
-                .deriveFont(AffineTransform.getScaleInstance(fontScaleX, 1.0))
-        } catch (e: Exception) {
-            error("Fail to load custom font: $e")
+        frameDrawer = when (mode) {
+            CGA.Mode.TEXT_80x25 -> TextFrameDrawer(displaySize, TextFrameDrawer.Mode.MODE_80x25, cga, videoRAM)
+            CGA.Mode.TEXT_40x25 -> TextFrameDrawer(displaySize, TextFrameDrawer.Mode.MODE_40x25, cga, videoRAM)
+            CGA.Mode.GRAPHICS_COLOR_320x200 ->
+                GraphicFrameDrawer(displaySize, GraphicFrameDrawer.Mode.COLOR_320x200, cga, videoRAM)
+            CGA.Mode.GRAPHICS_BW_320x200 -> error("Mode is not supported yet: $mode")
+            CGA.Mode.GRAPHICS_BW_640x200 -> error("Mode is not supported yet: $mode")
         }
     }
 

@@ -45,7 +45,13 @@ class RetraceSynchronizer {
                 cellsPerRow = 40
                 rowCount = 25
             }
-            CGA.Mode.GRAPHICS_COLOR_320x200 -> TODO()
+            CGA.Mode.GRAPHICS_COLOR_320x200 -> { // TODO fix
+                verticalRetraceDurationNanos = millisToNanos(1.25)
+                horizontalRetraceDurationNanos = millisToNanos(1.25)
+                nanosPerCell = 559
+                cellsPerRow = 80
+                rowCount = 25
+            }
             CGA.Mode.GRAPHICS_BW_320x200 -> TODO()
             CGA.Mode.GRAPHICS_BW_640x200 -> TODO()
         }.exhaustive

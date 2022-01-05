@@ -36,6 +36,9 @@ class CGA(
     val isCursorEnabled: Boolean
         get() = !registers[REGISTER_CURSOR_START].bit(5)
 
+    var intensity: Boolean = false
+    lateinit var palette: Palette
+
     init {
         retraceSynchronizer.setMode(mode)
     }
@@ -116,11 +119,11 @@ class CGA(
 
         override fun write(value: Int) {
             backgroundColor = Color.values()[value and 0xF]
-            // bit 4 not used
-            val palette = Palette.values()[value.bitInt(5)]
+            intensity = value.bit(4)
+            palette = Palette.values()[value.bitInt(5)]
             // bit 6-7 not used
 
-            logger.debug("Select color $backgroundColor, palette = $palette")
+            logger.debug("Select color $backgroundColor, intensity = $intensity, palette = $palette")
         }
 
         override fun read(): Int {
@@ -174,8 +177,8 @@ class CGA(
         WHITE(0xFF, 0xFF, 0xFF),
     }
 
-    private enum class Palette {
-        RED_GREEN_BROWN,
+    enum class Palette {
+        GREEN_RED_BROWN,
         CYAN_MAGENTA_WHITE
     }
 
