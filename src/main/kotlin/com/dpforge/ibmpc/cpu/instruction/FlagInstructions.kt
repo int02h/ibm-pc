@@ -56,13 +56,13 @@ object FlagInstructions {
 
     fun sahf(cpu: CPU): Int = with(cpu) {
         val affectedFlags = SIGN_FLAG or ZERO_FLAG or ADJUST_FLAG or PARITY_FLAG or CARRY_FLAG
-        registers.flags.value16 = registers.ah and affectedFlags
+        registers.flags.value16 = (registers.flags.value16 and 0xFF00) or (registers.ah and affectedFlags)
         registers.ip += 1
         Timing.sahf()
     }
 
     fun lahf(cpu: CPU): Int = with(cpu) {
-        registers.ah = registers.flags.value16
+        registers.ah = (registers.flags.value16 and 0xFF)
         registers.ip += 1
         Timing.lahf()
     }
